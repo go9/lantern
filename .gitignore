@@ -1,0 +1,13 @@
+# Build artifacts
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+lantern-*.tar
+/tmp/
+
+# Environment
+.env

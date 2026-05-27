@@ -1,0 +1,43 @@
+/*
+ * Lantern — OPTIONAL Tailwind integration.
+ *
+ * Only needed if you use Tailwind and want the explorer to match your palette
+ * automatically. Import it AFTER `tailwindcss` and `lantern.css`:
+ *
+ *   @import "tailwindcss";
+ *   @import "lantern/lantern.css";
+ *   @import "lantern/lantern.tailwind.css";
+ *
+ * It maps Lantern's `--lt-*` variables onto Tailwind v4's theme color
+ * variables, so re-theming flows from your Tailwind config. Override any single
+ * line below to point at a different scale (e.g. swap `--color-indigo-*` for
+ * your brand color). Not using Tailwind? Skip this file and theme `--lt-*`
+ * directly — `lantern.css` already looks good on its own.
+ */
+.lantern {
+  --lt-bg: var(--color-white);
+  --lt-bg-subtle: var(--color-slate-50);
+  --lt-bg-hover: var(--color-slate-100);
+  --lt-fg: var(--color-slate-800);
+  --lt-fg-muted: var(--color-slate-500);
+  --lt-border: var(--color-slate-200);
+  --lt-accent: var(--color-indigo-600);
+  --lt-danger: var(--color-red-600);
+  --lt-success: var(--color-green-600);
+  --lt-font: var(--font-sans);
+  --lt-mono: var(--font-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  .lantern:not(.lt-light):not([data-theme="light"]) {
+    --lt-bg: var(--color-slate-900);
+    --lt-bg-subtle: var(--color-slate-800);
+    --lt-bg-hover: var(--color-slate-700);
+    --lt-fg: var(--color-slate-200);
+    --lt-fg-muted: var(--color-slate-400);
+    --lt-border: var(--color-slate-700);
+    --lt-accent: var(--color-indigo-400);
+    --lt-danger: var(--color-red-400);
+    --lt-success: var(--color-green-400);
+  }
+}

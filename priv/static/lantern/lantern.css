@@ -1,0 +1,543 @@
+/*
+ * Lantern — standalone stylesheet.
+ *
+ * Drop this in for good-looking defaults with zero configuration. Everything
+ * is scoped under `.lantern` and lives in the low-priority `lantern` cascade
+ * layer, so ANY style you write outside the layer overrides it — even a plain
+ * single-class selector like `.lt-btn { ... }`.
+ *
+ * Re-theme by overriding the `--lt-*` variables on `.lantern` (or a parent).
+ * Force dark mode with `.lantern.lt-dark`; otherwise it follows the OS setting.
+ */
+@layer lantern {
+  .lantern {
+    /* Palette */
+    --lt-bg: #ffffff;
+    --lt-bg-subtle: #f8fafc;
+    --lt-bg-hover: #f1f5f9;
+    --lt-fg: #1e293b;
+    --lt-fg-muted: #64748b;
+    --lt-border: #e2e8f0;
+    --lt-accent: #4f46e5;
+    --lt-danger: #dc2626;
+    --lt-success: #16a34a;
+    --lt-ring: color-mix(in srgb, var(--lt-accent) 35%, transparent);
+
+    /* Shape & type */
+    --lt-radius: 0.5rem;
+    --lt-radius-sm: 0.375rem;
+    --lt-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --lt-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --lt-text: 0.875rem;
+    --lt-text-sm: 0.75rem;
+    --lt-height: 600px;
+
+    color: var(--lt-fg);
+    font-family: var(--lt-font);
+    font-size: var(--lt-text);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .lantern.lt-dark,
+  .lantern[data-theme="dark"] {
+    --lt-bg: #0f172a;
+    --lt-bg-subtle: #1e293b;
+    --lt-bg-hover: #334155;
+    --lt-fg: #e2e8f0;
+    --lt-fg-muted: #94a3b8;
+    --lt-border: #334155;
+    --lt-accent: #818cf8;
+    --lt-danger: #f87171;
+    --lt-success: #4ade80;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .lantern:not(.lt-light):not([data-theme="light"]) {
+      --lt-bg: #0f172a;
+      --lt-bg-subtle: #1e293b;
+      --lt-bg-hover: #334155;
+      --lt-fg: #e2e8f0;
+      --lt-fg-muted: #94a3b8;
+      --lt-border: #334155;
+      --lt-accent: #818cf8;
+      --lt-danger: #f87171;
+      --lt-success: #4ade80;
+    }
+  }
+
+  /* Fullscreen */
+  .lantern.lt-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: var(--lt-bg);
+    padding: 1rem 1.25rem;
+    overflow: auto;
+  }
+  /* Keep the header (and its exit control) pinned while the body scrolls. */
+  .lantern.lt-fullscreen .lt-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--lt-bg);
+    padding: 0.25rem 0 0.75rem;
+    border-bottom: 1px solid var(--lt-border);
+    margin-bottom: 0.25rem;
+  }
+
+  /* Header */
+  .lantern .lt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .lantern .lt-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .lantern .lt-header-actions .lt-iconbtn {
+    padding: 0.375rem;
+    border-radius: var(--lt-radius-sm);
+  }
+  .lantern .lt-header-actions .lt-iconbtn:hover {
+    background: var(--lt-bg-hover);
+  }
+
+  /* Body: sidebar + content, both filling a fixed height */
+  .lantern .lt-body {
+    display: flex;
+    align-items: stretch;
+    gap: 1rem;
+    height: var(--lt-height);
+  }
+  .lantern.lt-fullscreen .lt-body {
+    height: calc(100vh - 7rem);
+  }
+  .lantern .lt-sidebar {
+    flex: none;
+    width: 12rem;
+    height: 100%;
+    overflow-y: auto;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius);
+    padding: 0.5rem;
+  }
+  .lantern .lt-sidebar-title {
+    font-size: var(--lt-text-sm);
+    font-weight: 600;
+    color: var(--lt-fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.5rem 0.5rem;
+  }
+  .lantern .lt-table-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .lantern .lt-table-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--lt-fg);
+    font-family: var(--lt-mono);
+    font-size: var(--lt-text-sm);
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--lt-radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lantern .lt-table-item:hover {
+    background: var(--lt-bg-hover);
+  }
+  .lantern .lt-table-item.lt-active {
+    background: color-mix(in srgb, var(--lt-accent) 14%, transparent);
+    color: var(--lt-accent);
+    font-weight: 600;
+  }
+  .lantern .lt-content {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .lantern .lt-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .lantern .lt-title-text {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  /* Icons */
+  .lantern .lt-icon {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+  }
+  .lantern .lt-icon-sm {
+    width: 0.8rem;
+    height: 0.8rem;
+  }
+  .lantern .lt-icon-lg {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--lt-fg-muted);
+  }
+
+  /* Banners */
+  .lantern .lt-error {
+    border-radius: var(--lt-radius);
+    background: color-mix(in srgb, var(--lt-danger) 12%, transparent);
+    color: var(--lt-danger);
+    padding: 0.5rem 0.75rem;
+    font-size: var(--lt-text);
+  }
+  .lantern .lt-empty {
+    border: 1px dashed var(--lt-border);
+    border-radius: var(--lt-radius);
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--lt-fg-muted);
+  }
+  .lantern .lt-note {
+    font-size: var(--lt-text-sm);
+    color: var(--lt-fg-muted);
+  }
+
+  .lantern .lt-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    min-height: 0;
+  }
+
+  /* Toolbar */
+  .lantern .lt-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .lantern .lt-filter-form {
+    flex: 1 1 16rem;
+    min-width: 16rem;
+  }
+  .lantern .lt-filter {
+    font-family: var(--lt-mono);
+    width: 100%;
+  }
+  .lantern .lt-filter-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  /* Filter help popover */
+  .lantern .lt-help {
+    flex: none;
+  }
+  .lantern .lt-help-btn {
+    list-style: none;
+    cursor: pointer;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--lt-border);
+    border-radius: 9999px;
+    color: var(--lt-fg-muted);
+    font-size: var(--lt-text-sm);
+    font-weight: 600;
+    user-select: none;
+  }
+  .lantern .lt-help-btn::-webkit-details-marker {
+    display: none;
+  }
+  .lantern .lt-help-btn:hover {
+    color: var(--lt-fg);
+    border-color: var(--lt-accent);
+  }
+  .lantern .lt-help-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.375rem);
+    z-index: 20;
+    width: 22rem;
+    max-width: 80vw;
+    background: var(--lt-bg);
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .lantern .lt-help-note {
+    margin: 0 0 0.5rem;
+    font-size: var(--lt-text-sm);
+    color: var(--lt-fg-muted);
+    line-height: 1.5;
+  }
+  .lantern .lt-help-note code,
+  .lantern .lt-help-example code {
+    font-family: var(--lt-mono);
+    font-size: 0.78em;
+  }
+  .lantern .lt-help-example {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--lt-fg);
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--lt-radius-sm);
+    cursor: pointer;
+  }
+  .lantern .lt-help-example:hover {
+    background: var(--lt-bg-hover);
+  }
+  .lantern .lt-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Inputs */
+  .lantern .lt-input {
+    appearance: auto;
+    width: 100%;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius-sm);
+    background: var(--lt-bg);
+    color: var(--lt-fg);
+    padding: 0.375rem 0.5rem;
+    font-size: var(--lt-text-sm);
+    font-family: var(--lt-mono);
+    line-height: 1.4;
+  }
+  .lantern .lt-input:focus {
+    outline: none;
+    border-color: var(--lt-accent);
+    box-shadow: 0 0 0 3px var(--lt-ring);
+  }
+  .lantern .lt-filter {
+    font-family: var(--lt-font);
+  }
+  .lantern .lt-json.lt-invalid,
+  .lantern .lt-json:invalid {
+    border-color: var(--lt-danger);
+    color: var(--lt-danger);
+  }
+
+  /* Buttons */
+  .lantern .lt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius-sm);
+    background: var(--lt-bg);
+    color: var(--lt-fg);
+    padding: 0.375rem 0.75rem;
+    font-size: var(--lt-text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+  }
+  .lantern .lt-btn:hover {
+    background: var(--lt-bg-hover);
+  }
+  .lantern .lt-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .lantern .lt-btn-danger:hover {
+    border-color: var(--lt-danger);
+    color: var(--lt-danger);
+  }
+
+  /* Small icon-only buttons (row save/cancel/edit) */
+  .lantern .lt-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    background: none;
+    color: var(--lt-fg-muted);
+    cursor: pointer;
+    padding: 0.125rem;
+  }
+  .lantern .lt-iconbtn:hover {
+    color: var(--lt-fg);
+  }
+  .lantern .lt-iconbtn-save {
+    color: var(--lt-success);
+  }
+
+  /* Null clear button */
+  .lantern .lt-null {
+    flex: none;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius-sm);
+    background: var(--lt-bg);
+    color: var(--lt-fg-muted);
+    font-size: var(--lt-text-sm);
+    padding: 0.25rem 0.375rem;
+    cursor: pointer;
+  }
+  .lantern .lt-null:hover {
+    color: var(--lt-fg);
+  }
+
+  /* Grid */
+  .lantern .lt-grid {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius);
+  }
+  /* Keep the header row visible while scrolling rows. */
+  .lantern .lt-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--lt-bg-subtle);
+  }
+  .lantern .lt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--lt-text);
+  }
+  .lantern .lt-table thead {
+    background: var(--lt-bg-subtle);
+  }
+  .lantern .lt-table tr {
+    border-bottom: 1px solid var(--lt-border);
+  }
+  .lantern .lt-table tbody tr:last-child {
+    border-bottom: none;
+  }
+  .lantern .lt-row:hover {
+    background: var(--lt-bg-hover);
+  }
+  .lantern .lt-row-insert {
+    background: color-mix(in srgb, var(--lt-success) 8%, transparent);
+  }
+
+  .lantern .lt-check {
+    width: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+  }
+  .lantern .lt-th {
+    position: relative;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--lt-fg-muted);
+    white-space: nowrap;
+  }
+  .lantern .lt-th-actions {
+    width: 5rem;
+  }
+  .lantern .lt-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    cursor: pointer;
+  }
+  .lantern .lt-sort:hover {
+    color: var(--lt-fg);
+  }
+  .lantern .lt-resize {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 5px;
+    cursor: col-resize;
+    user-select: none;
+    /* Stop the browser from interpreting drags on the handle as a pan/zoom
+       gesture so touch resizing actually fires pointer events. */
+    touch-action: none;
+  }
+  .lantern .lt-resize:hover {
+    background: color-mix(in srgb, var(--lt-accent) 45%, transparent);
+  }
+
+  .lantern .lt-td {
+    padding: 0.375rem 0.75rem;
+    font-family: var(--lt-mono);
+    font-size: var(--lt-text-sm);
+    color: var(--lt-fg);
+    max-width: 20rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lantern .lt-td-edit {
+    padding: 0.25rem 0.375rem;
+  }
+  .lantern .lt-td-actions {
+    padding: 0.375rem 0.75rem;
+  }
+  .lantern .lt-pk {
+    padding: 0 0.5rem;
+    font-family: var(--lt-mono);
+    font-size: var(--lt-text-sm);
+    color: var(--lt-fg-muted);
+  }
+  .lantern .lt-null-text {
+    font-style: italic;
+    color: var(--lt-fg-muted);
+    opacity: 0.7;
+  }
+  .lantern .lt-empty-row {
+    padding: 2rem 0.75rem;
+    text-align: center;
+    color: var(--lt-fg-muted);
+  }
+
+  .lantern .lt-field {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .lantern .lt-rowform {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  /* Footer / pagination */
+  .lantern .lt-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--lt-text-sm);
+    color: var(--lt-fg-muted);
+  }
+  .lantern .lt-pager {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
