@@ -540,4 +540,231 @@
     align-items: center;
     gap: 0.5rem;
   }
+
+  /* Sidebar header (title + new-table button) */
+  .lantern .lt-sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 0.25rem;
+  }
+
+  /* Primary / small button variants */
+  .lantern .lt-btn-primary {
+    background: var(--lt-accent);
+    border-color: var(--lt-accent);
+    color: #fff;
+  }
+  .lantern .lt-btn-primary:hover {
+    background: color-mix(in srgb, var(--lt-accent) 86%, black);
+    color: #fff;
+  }
+  .lantern .lt-btn-sm {
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Dropdown menu (table actions) */
+  .lantern .lt-menu {
+    position: relative;
+    flex: none;
+  }
+  .lantern .lt-menu-btn {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0.375rem;
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius-sm);
+    color: var(--lt-fg-muted);
+    background: var(--lt-bg);
+    user-select: none;
+  }
+  .lantern .lt-menu-btn::-webkit-details-marker {
+    display: none;
+  }
+  .lantern .lt-menu-btn:hover {
+    background: var(--lt-bg-hover);
+    color: var(--lt-fg);
+  }
+  .lantern .lt-menu-panel {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.375rem);
+    z-index: 30;
+    min-width: 12rem;
+    background: var(--lt-bg);
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  .lantern .lt-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: none;
+    color: var(--lt-fg);
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--lt-radius-sm);
+    font-size: var(--lt-text-sm);
+    cursor: pointer;
+  }
+  .lantern .lt-menu-item:hover {
+    background: var(--lt-bg-hover);
+  }
+  .lantern .lt-menu-item-danger:hover {
+    color: var(--lt-danger);
+  }
+
+  /* Modal dialog (create table, edit columns, rename) */
+  .lantern .lt-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .lantern .lt-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    background: rgb(15 23 42 / 0.5);
+  }
+  .lantern .lt-modal-card {
+    position: relative;
+    z-index: 1;
+    width: min(40rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 4rem);
+    overflow: auto;
+    background: var(--lt-bg);
+    color: var(--lt-fg);
+    border: 1px solid var(--lt-border);
+    border-radius: var(--lt-radius);
+    box-shadow: 0 16px 48px rgb(0 0 0 / 0.24);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .lantern .lt-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .lantern .lt-modal-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .lantern .lt-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .lantern .lt-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  /* Modal forms */
+  .lantern .lt-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .lantern .lt-form-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: var(--lt-text-sm);
+    font-weight: 500;
+    color: var(--lt-fg-muted);
+  }
+  .lantern .lt-form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .lantern .lt-form-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--lt-text-sm);
+    font-weight: 600;
+    color: var(--lt-fg-muted);
+  }
+  .lantern .lt-check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: var(--lt-text-sm);
+    color: var(--lt-fg-muted);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  /* Create-table column rows */
+  .lantern .lt-colgrid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  .lantern .lt-colgrid-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, 1fr) 9rem auto auto 1.5rem;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  /* Edit-columns dialog */
+  .lantern .lt-cols {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .lantern .lt-col-row {
+    display: grid;
+    grid-template-columns: minmax(6rem, 1fr) auto auto;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .lantern .lt-col-rename {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .lantern .lt-col-rename .lt-input {
+    flex: 1;
+  }
+  .lantern .lt-col-type {
+    font-family: var(--lt-mono);
+    font-size: var(--lt-text-sm);
+    color: var(--lt-fg-muted);
+    white-space: nowrap;
+  }
+  .lantern .lt-col-add {
+    display: grid;
+    grid-template-columns: minmax(6rem, 1fr) 9rem auto auto;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--lt-border);
+  }
 }

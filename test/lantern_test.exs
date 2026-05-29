@@ -223,6 +223,97 @@ defmodule LanternTest do
     assert {"2", "Grace — 2"} in options
   end
 
+  describe "DDL" do
+    @ddl_table "lantern_ddl_itest"
+
+    setup %{source: source} do
+      drop = fn ->
+        with_raw_conn(source, &Postgrex.query!(&1, "DROP TABLE IF EXISTS #{@ddl_table}", []))
+      end
+
+      drop.()
+      on_exit(drop)
+      :ok
+    end
+
+    test "create_table creates a usable, typed table with a primary key", %{source: source} do
+      assert :ok =
+               Lantern.create_table(source, @ddl_table, [
+                 %{name: "id", type: "bigint", nullable: false, primary_key: true},
+                 %{name: "label", type: "text"},
+                 %{name: "qty", type: "integer", nullable: false}
+               ])
+
+      assert {:ok, tables} = Lantern.list_tables(source)
+      assert @ddl_table in tables
+      assert {:ok, ["id"]} = Lantern.primary_keys(source, @ddl_table)
+
+      {:ok, cols} = Lantern.columns(source, @ddl_table)
+      assert Enum.map(cols, & &1.name) == ~w(id label qty)
+      assert Enum.find(cols, &(&1.name == "label")).nullable == true
+      assert Enum.find(cols, &(&1.name == "qty")).nullable == false
+    end
+
+    test "create_table rejects an unsupported type without touching the db", %{source: source} do
+      assert {:error, message} =
+               Lantern.create_table(source, @ddl_table, [%{name: "c", type: "bogus"}])
+
+      assert message =~ "Unsupported column type"
+      {:ok, tables} = Lantern.list_tables(source)
+      refute @ddl_table in tables
+    end
+
+    test "create_table rejects an empty column list", %{source: source} do
+      assert {:error, message} = Lantern.create_table(source, @ddl_table, [])
+      assert message =~ "at least one column"
+    end
+
+    test "drop_table removes the table", %{source: source} do
+      :ok = Lantern.create_table(source, @ddl_table, [%{name: "id", type: "bigint"}])
+      assert :ok = Lantern.drop_table(source, @ddl_table)
+      {:ok, tables} = Lantern.list_tables(source)
+      refute @ddl_table in tables
+    end
+
+    test "add / rename / drop column round-trips", %{source: source} do
+      :ok = Lantern.create_table(source, @ddl_table, [%{name: "id", type: "bigint"}])
+
+      assert :ok =
+               Lantern.add_column(source, @ddl_table, %{name: "nickname", type: "varchar(20)"})
+
+      {:ok, cols} = Lantern.columns(source, @ddl_table)
+      assert "nickname" in Enum.map(cols, & &1.name)
+
+      assert :ok = Lantern.rename_column(source, @ddl_table, "nickname", "handle")
+      {:ok, cols} = Lantern.columns(source, @ddl_table)
+      assert "handle" in Enum.map(cols, & &1.name)
+      refute "nickname" in Enum.map(cols, & &1.name)
+
+      assert :ok = Lantern.drop_column(source, @ddl_table, "handle")
+      {:ok, cols} = Lantern.columns(source, @ddl_table)
+      refute "handle" in Enum.map(cols, & &1.name)
+    end
+
+    test "rename_table renames the table", %{source: source} do
+      :ok = Lantern.create_table(source, @ddl_table, [%{name: "id", type: "bigint"}])
+      renamed = "#{@ddl_table}_renamed"
+
+      on_exit(fn ->
+        with_raw_conn(source, &Postgrex.query!(&1, "DROP TABLE IF EXISTS #{renamed}", []))
+      end)
+
+      assert :ok = Lantern.rename_table(source, @ddl_table, renamed)
+      {:ok, tables} = Lantern.list_tables(source)
+      assert renamed in tables
+      refute @ddl_table in tables
+    end
+
+    test "blank names are rejected before connecting", %{source: source} do
+      assert {:error, message} = Lantern.drop_table(source, "   ")
+      assert message =~ "can't be blank"
+    end
+  end
+
   defp repo_source, do: Lantern.TestDB.url()
 
   defp with_raw_conn(source, fun) do

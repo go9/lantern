@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-05-29
+
+### Added
+
+- Table-level DDL on the `Lantern` facade: `create_table/3`, `drop_table/2`,
+  `add_column/3`, `drop_column/3`, `rename_column/4`, and `rename_table/3`.
+  Each validates names and builds (and type-checks) its statement before
+  opening a connection, so a bad request never spends one.
+- `Lantern.SQL` DDL builders and a `validate_type/1` allowlist. Since DDL
+  can't parameterize identifiers or types, the safety boundary is
+  `quote_ident/1` for every identifier plus a curated type allowlist
+  (simple + parameterized `(n)`/`(n,m)` types); injection attempts such as
+  `"text; drop table users"` are rejected.
+- `Lantern.Explorer` table editor UI: a "New table" dialog (named columns,
+  per-column type/nullable/primary-key, add/remove rows), and a per-table
+  menu to edit columns (add/rename/drop), rename the table, or drop it.
+  Destructive actions are guarded by confirmations.
+
 ## [0.1.0] - 2026-05-28
 
 Initial release.

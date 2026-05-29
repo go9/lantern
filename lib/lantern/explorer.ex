@@ -105,6 +105,9 @@ defmodule Lantern.Explorer do
       |> assign(:inserting, false)
       |> assign(:sidebar_open, true)
       |> assign(:fullscreen, false)
+      |> assign(:dialog, nil)
+      |> assign(:new_table_name, "")
+      |> assign(:new_columns, [])
       |> assign(:error, error)
 
     if selected, do: socket |> load_schema() |> load_rows(), else: socket
@@ -130,6 +133,7 @@ defmodule Lantern.Explorer do
       |> assign(:selected, MapSet.new())
       |> assign(:editing, nil)
       |> assign(:inserting, false)
+      |> assign(:dialog, nil)
       |> load_schema()
       |> load_rows()
 
@@ -318,6 +322,127 @@ defmodule Lantern.Explorer do
   end
 
   # ---------------------------------------------------------------------------
+  # Events — schema changes (DDL)
+  # ---------------------------------------------------------------------------
+
+  def handle_event("open_create_table", _params, socket) do
+    {:noreply,
+     assign(socket,
+       dialog: :create_table,
+       new_table_name: "",
+       new_columns: [empty_column(:first)],
+       editing: nil,
+       inserting: false
+     )
+     |> clear_error()}
+  end
+
+  # Keep the create-table draft in sync so adding/removing column rows preserves
+  # already-typed values. Values are echoed back verbatim, so focused inputs
+  # don't lose their caret.
+  def handle_event("sync_new_table", params, socket) do
+    {:noreply,
+     assign(socket,
+       new_table_name: Map.get(params, "table", socket.assigns.new_table_name),
+       new_columns: parse_columns(params)
+     )}
+  end
+
+  def handle_event("add_column_row", _params, socket) do
+    {:noreply, assign(socket, :new_columns, socket.assigns.new_columns ++ [empty_column(:more)])}
+  end
+
+  def handle_event("remove_column_row", %{"index" => index}, socket) do
+    columns = List.delete_at(socket.assigns.new_columns, String.to_integer(index))
+    columns = if columns == [], do: [empty_column(:first)], else: columns
+    {:noreply, assign(socket, :new_columns, columns)}
+  end
+
+  def handle_event("create_table", params, socket) do
+    name = Map.get(params, "table", "")
+    columns = parse_columns(params)
+
+    case Lantern.create_table(socket.assigns.source, name, columns) do
+      :ok ->
+        {:noreply, reload_tables(socket, name)}
+
+      {:error, reason} ->
+        {:noreply,
+         assign(socket, new_table_name: name, new_columns: columns, error: humanize(reason))}
+    end
+  end
+
+  def handle_event("open_columns", _params, socket) do
+    {:noreply, assign(socket, dialog: :columns, editing: nil, inserting: false) |> clear_error()}
+  end
+
+  def handle_event("add_column", params, socket) do
+    column = %{
+      name: Map.get(params, "name", ""),
+      type: Map.get(params, "type", "text"),
+      nullable: Map.get(params, "nullable", "true") == "true"
+    }
+
+    case Lantern.add_column(socket.assigns.source, socket.assigns.selected_table, column) do
+      :ok ->
+        # Keep the dialog open so several columns can be managed in one sitting.
+        {:noreply, socket |> load_schema() |> load_rows() |> clear_error()}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :error, humanize(reason))}
+    end
+  end
+
+  def handle_event("rename_column", %{"from" => from, "name" => to}, socket) do
+    case Lantern.rename_column(socket.assigns.source, socket.assigns.selected_table, from, to) do
+      :ok ->
+        {:noreply, socket |> load_schema() |> load_rows() |> clear_error()}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :error, humanize(reason))}
+    end
+  end
+
+  def handle_event("drop_column", %{"column" => column}, socket) do
+    case Lantern.drop_column(socket.assigns.source, socket.assigns.selected_table, column) do
+      :ok ->
+        {:noreply, socket |> load_schema() |> load_rows() |> clear_error()}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :error, humanize(reason))}
+    end
+  end
+
+  def handle_event("open_rename_table", _params, socket) do
+    {:noreply,
+     assign(socket, dialog: :rename_table, editing: nil, inserting: false) |> clear_error()}
+  end
+
+  def handle_event("rename_table", %{"name" => new_name}, socket) do
+    case Lantern.rename_table(socket.assigns.source, socket.assigns.selected_table, new_name) do
+      :ok ->
+        {:noreply, reload_tables(socket, new_name)}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :error, humanize(reason))}
+    end
+  end
+
+  def handle_event("drop_table", _params, socket) do
+    case Lantern.drop_table(socket.assigns.source, socket.assigns.selected_table) do
+      :ok ->
+        {:noreply, reload_tables(socket, nil)}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, :error, humanize(reason))}
+    end
+  end
+
+  def handle_event("close_dialog", _params, socket) do
+    {:noreply, assign(socket, :dialog, nil)}
+  end
+
+  # ---------------------------------------------------------------------------
   # Data loading
   # ---------------------------------------------------------------------------
 
@@ -469,6 +594,106 @@ defmodule Lantern.Explorer do
   defp humanize(:no_rows), do: "No rows selected."
   defp humanize(reason), do: inspect(reason)
 
+  # The first column of a brand-new table defaults to an auto-incrementing
+  # primary key; subsequent rows start as plain nullable text.
+  defp empty_column(:first),
+    do: %{name: "id", type: "bigserial", nullable: false, primary_key: true}
+
+  defp empty_column(:more), do: %{name: "", type: "text", nullable: true, primary_key: false}
+
+  # Parses the nested `col[i][...]` params of the create-table form back into an
+  # ordered list of column specs.
+  defp parse_columns(%{"col" => cols}) when is_map(cols) do
+    cols
+    |> Enum.sort_by(fn {idx, _} -> String.to_integer(idx) end)
+    |> Enum.map(fn {_idx, attrs} ->
+      %{
+        name: Map.get(attrs, "name", ""),
+        type: Map.get(attrs, "type", "text"),
+        nullable: Map.get(attrs, "nullable", "true") == "true",
+        primary_key: Map.get(attrs, "primary_key", "false") == "true"
+      }
+    end)
+  end
+
+  defp parse_columns(_), do: []
+
+  # Curated type menu — every value passes Lantern.SQL.validate_type/1, so the
+  # picker can't produce a rejected type. Listed explicitly (not ~w) so the
+  # multi-word "double precision" stays a single option.
+  defp type_options do
+    [
+      "text",
+      "varchar",
+      "integer",
+      "bigint",
+      "smallint",
+      "serial",
+      "bigserial",
+      "numeric",
+      "real",
+      "double precision",
+      "boolean",
+      "uuid",
+      "json",
+      "jsonb",
+      "date",
+      "time",
+      "timestamp",
+      "timestamptz",
+      "bytea",
+      "inet"
+    ]
+  end
+
+  # Re-lists tables after a structural change and re-selects sensibly: the named
+  # table if it still exists (create/rename), otherwise the first remaining one
+  # (drop). Resets the per-table view so stale sort/filter/page state can't leak.
+  defp reload_tables(socket, prefer) do
+    case Lantern.list_tables(socket.assigns.source) do
+      {:ok, tables} ->
+        selected = if prefer && prefer in tables, do: prefer, else: List.first(tables)
+
+        socket =
+          socket
+          |> assign(
+            tables: tables,
+            selected_table: selected,
+            dialog: nil,
+            sort_by: nil,
+            sort_dir: :asc,
+            where_clause: "",
+            page: 0,
+            selected: MapSet.new(),
+            editing: nil,
+            inserting: false
+          )
+          |> clear_error()
+
+        if selected do
+          socket |> load_schema() |> load_rows()
+        else
+          assign(socket,
+            columns: [],
+            primary_keys: [],
+            fk_options: %{},
+            col_meta: %{},
+            rows: [],
+            count: 0,
+            result_columns: []
+          )
+        end
+
+      {:error, reason} ->
+        assign(socket, :error, humanize(reason))
+    end
+  end
+
+  defp dialog_title(:create_table), do: "New table"
+  defp dialog_title(:columns), do: "Edit columns"
+  defp dialog_title(:rename_table), do: "Rename table"
+  defp dialog_title(_), do: ""
+
   # ---------------------------------------------------------------------------
   # Render
   # ---------------------------------------------------------------------------
@@ -526,7 +751,19 @@ defmodule Lantern.Explorer do
 
       <div class="lt-body">
         <aside :if={@sidebar_open} class="lt-sidebar">
-          <div class="lt-sidebar-title">Tables</div>
+          <div class="lt-sidebar-head">
+            <span class="lt-sidebar-title">Tables</span>
+            <button
+              type="button"
+              class="lt-iconbtn"
+              phx-click="open_create_table"
+              phx-target={@myself}
+              title="New table"
+              aria-label="Create a new table"
+            >
+              <.icon name="hero-plus" class="lt-icon" />
+            </button>
+          </div>
           <nav class="lt-table-list">
             <button
               :for={t <- @tables}
@@ -615,6 +852,38 @@ defmodule Lantern.Explorer do
                 >
                   <.icon name="hero-arrow-path" class="lt-icon" />
                 </button>
+                <details class="lt-menu">
+                  <summary class="lt-menu-btn" title="Table actions" aria-label="Table actions">
+                    <.icon name="hero-ellipsis-vertical" class="lt-icon" />
+                  </summary>
+                  <div class="lt-menu-panel">
+                    <button
+                      type="button"
+                      class="lt-menu-item"
+                      phx-click="open_columns"
+                      phx-target={@myself}
+                    >
+                      <.icon name="hero-table-cells" class="lt-icon" /> Edit columns
+                    </button>
+                    <button
+                      type="button"
+                      class="lt-menu-item"
+                      phx-click="open_rename_table"
+                      phx-target={@myself}
+                    >
+                      <.icon name="hero-pencil-square" class="lt-icon" /> Rename table
+                    </button>
+                    <button
+                      type="button"
+                      class="lt-menu-item lt-menu-item-danger"
+                      phx-click="drop_table"
+                      phx-target={@myself}
+                      data-confirm={"Drop table \"#{@selected_table}\"? This permanently deletes the table and all its data."}
+                    >
+                      <.icon name="hero-trash" class="lt-icon" /> Drop table
+                    </button>
+                  </div>
+                </details>
               </div>
             </div>
 
@@ -800,6 +1069,212 @@ defmodule Lantern.Explorer do
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div :if={@dialog} class="lt-modal">
+        <button
+          type="button"
+          class="lt-modal-backdrop"
+          phx-click="close_dialog"
+          phx-target={@myself}
+          aria-label="Close dialog"
+        />
+        <div class="lt-modal-card" role="dialog" aria-modal="true">
+          <div class="lt-modal-head">
+            <h3 class="lt-modal-title">{dialog_title(@dialog)}</h3>
+            <button
+              type="button"
+              class="lt-iconbtn"
+              phx-click="close_dialog"
+              phx-target={@myself}
+              aria-label="Close"
+            >
+              <.icon name="hero-x-mark" class="lt-icon" />
+            </button>
+          </div>
+
+          <div :if={@error} class="lt-error">{@error}</div>
+
+          <div class="lt-modal-body">
+            <%= case @dialog do %>
+              <% :create_table -> %>
+                <form
+                  phx-change="sync_new_table"
+                  phx-submit="create_table"
+                  phx-target={@myself}
+                  class="lt-form"
+                >
+                  <label class="lt-form-label">
+                    Table name
+                    <input
+                      type="text"
+                      name="table"
+                      value={@new_table_name}
+                      placeholder="my_table"
+                      autocomplete="off"
+                      class="lt-input"
+                    />
+                  </label>
+
+                  <div class="lt-form-section">
+                    <div class="lt-form-section-head">
+                      <span>Columns</span>
+                      <button
+                        type="button"
+                        class="lt-btn lt-btn-sm"
+                        phx-click="add_column_row"
+                        phx-target={@myself}
+                      >
+                        <.icon name="hero-plus" class="lt-icon" /> Add
+                      </button>
+                    </div>
+
+                    <div class="lt-colgrid">
+                      <div :for={{c, i} <- Enum.with_index(@new_columns)} class="lt-colgrid-row">
+                        <input
+                          type="text"
+                          name={"col[#{i}][name]"}
+                          value={c.name}
+                          placeholder="column_name"
+                          autocomplete="off"
+                          class="lt-input"
+                        />
+                        <select name={"col[#{i}][type]"} class="lt-input" aria-label="Column type">
+                          <option :for={t <- type_options()} value={t} selected={c.type == t}>
+                            {t}
+                          </option>
+                        </select>
+                        <label class="lt-check-label" title="Allow NULL">
+                          <input type="hidden" name={"col[#{i}][nullable]"} value="false" />
+                          <input
+                            type="checkbox"
+                            name={"col[#{i}][nullable]"}
+                            value="true"
+                            checked={c.nullable}
+                          /> Null
+                        </label>
+                        <label class="lt-check-label" title="Primary key">
+                          <input type="hidden" name={"col[#{i}][primary_key]"} value="false" />
+                          <input
+                            type="checkbox"
+                            name={"col[#{i}][primary_key]"}
+                            value="true"
+                            checked={c.primary_key}
+                          /> PK
+                        </label>
+                        <button
+                          type="button"
+                          class="lt-iconbtn"
+                          phx-click="remove_column_row"
+                          phx-value-index={i}
+                          phx-target={@myself}
+                          title="Remove column"
+                          aria-label="Remove column"
+                        >
+                          <.icon name="hero-x-mark" class="lt-icon" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="lt-modal-foot">
+                    <button
+                      type="button"
+                      class="lt-btn"
+                      phx-click="close_dialog"
+                      phx-target={@myself}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" class="lt-btn lt-btn-primary">Create table</button>
+                  </div>
+                </form>
+              <% :columns -> %>
+                <div class="lt-cols">
+                  <div :for={c <- @columns} class="lt-col-row">
+                    <form phx-submit="rename_column" phx-target={@myself} class="lt-col-rename">
+                      <input type="hidden" name="from" value={c.name} />
+                      <input
+                        type="text"
+                        name="name"
+                        value={c.name}
+                        autocomplete="off"
+                        aria-label={"Rename column #{c.name}"}
+                        class="lt-input"
+                      />
+                      <button
+                        type="submit"
+                        class="lt-iconbtn lt-iconbtn-save"
+                        title="Rename column"
+                        aria-label={"Rename #{c.name}"}
+                      >
+                        <.icon name="hero-check" class="lt-icon" />
+                      </button>
+                    </form>
+                    <span class="lt-col-type">{c.type}</span>
+                    <button
+                      type="button"
+                      class="lt-iconbtn"
+                      phx-click="drop_column"
+                      phx-value-column={c.name}
+                      phx-target={@myself}
+                      data-confirm={"Drop column \"#{c.name}\"? This permanently deletes its data."}
+                      title="Drop column"
+                      aria-label={"Drop #{c.name}"}
+                    >
+                      <.icon name="hero-trash" class="lt-icon" />
+                    </button>
+                  </div>
+
+                  <form phx-submit="add_column" phx-target={@myself} class="lt-col-add">
+                    <input
+                      type="text"
+                      name="name"
+                      placeholder="new_column"
+                      autocomplete="off"
+                      aria-label="New column name"
+                      class="lt-input"
+                    />
+                    <select name="type" class="lt-input" aria-label="New column type">
+                      <option :for={t <- type_options()} value={t} selected={t == "text"}>{t}</option>
+                    </select>
+                    <label class="lt-check-label" title="Allow NULL">
+                      <input type="hidden" name="nullable" value="false" />
+                      <input type="checkbox" name="nullable" value="true" checked /> Null
+                    </label>
+                    <button type="submit" class="lt-btn">
+                      <.icon name="hero-plus" class="lt-icon" /> Add
+                    </button>
+                  </form>
+                </div>
+              <% :rename_table -> %>
+                <form phx-submit="rename_table" phx-target={@myself} class="lt-form">
+                  <label class="lt-form-label">
+                    New name for "{@selected_table}"
+                    <input
+                      type="text"
+                      name="name"
+                      value={@selected_table}
+                      autocomplete="off"
+                      class="lt-input"
+                    />
+                  </label>
+                  <div class="lt-modal-foot">
+                    <button
+                      type="button"
+                      class="lt-btn"
+                      phx-click="close_dialog"
+                      phx-target={@myself}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" class="lt-btn lt-btn-primary">Rename</button>
+                  </div>
+                </form>
+              <% _ -> %>
+            <% end %>
           </div>
         </div>
       </div>
@@ -1017,6 +1492,10 @@ defmodule Lantern.Explorer do
   defp icon_path("hero-pencil-square"),
     do:
       ~s(<path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>)
+
+  defp icon_path("hero-ellipsis-vertical"),
+    do:
+      ~s(<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"/>)
 
   defp icon_path(_), do: ""
 end

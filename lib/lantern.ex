@@ -167,6 +167,75 @@ defmodule Lantern do
   end
 
   # ---------------------------------------------------------------------------
+  # Schema changes (DDL)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Creates a table. `columns` is a list of column specs (see
+  `t:Lantern.SQL.column/0`); at least one is required.
+
+  Returns `:ok` or `{:error, message}` — both validation failures (blank name,
+  no columns, unsupported type) and Postgres errors come back as a message
+  string ready to show the operator.
+  """
+  @spec create_table(source(), String.t(), [SQL.column()]) :: :ok | {:error, String.t()}
+  def create_table(source, table, columns) when is_list(columns) do
+    with :ok <- validate_name("Table name", table),
+         {:ok, statement} <- build_ddl(SQL.create_table(table, columns)) do
+      Connection.run(source, fn conn -> exec_ddl(conn, statement) end)
+    end
+  end
+
+  @doc "Drops a table. Returns `:ok` or `{:error, message}`."
+  @spec drop_table(source(), String.t()) :: :ok | {:error, String.t()}
+  def drop_table(source, table) do
+    with :ok <- validate_name("Table name", table),
+         {:ok, statement} <- build_ddl(SQL.drop_table(table)) do
+      Connection.run(source, fn conn -> exec_ddl(conn, statement) end)
+    end
+  end
+
+  @doc "Adds a column. `column` is a column spec. Returns `:ok` or `{:error, message}`."
+  @spec add_column(source(), String.t(), SQL.column()) :: :ok | {:error, String.t()}
+  def add_column(source, table, column) when is_map(column) do
+    with :ok <- validate_name("Table name", table),
+         {:ok, statement} <- build_ddl(SQL.add_column(table, column)) do
+      Connection.run(source, fn conn -> exec_ddl(conn, statement) end)
+    end
+  end
+
+  @doc "Drops a column. Returns `:ok` or `{:error, message}`."
+  @spec drop_column(source(), String.t(), String.t()) :: :ok | {:error, String.t()}
+  def drop_column(source, table, column) do
+    with :ok <- validate_name("Table name", table),
+         :ok <- validate_name("Column name", column),
+         {:ok, statement} <- build_ddl(SQL.drop_column(table, column)) do
+      Connection.run(source, fn conn -> exec_ddl(conn, statement) end)
+    end
+  end
+
+  @doc "Renames a column. Returns `:ok` or `{:error, message}`."
+  @spec rename_column(source(), String.t(), String.t(), String.t()) :: :ok | {:error, String.t()}
+  def rename_column(source, table, from, to) do
+    with :ok <- validate_name("Table name", table),
+         :ok <- validate_name("Column name", from),
+         :ok <- validate_name("New column name", to),
+         {:ok, statement} <- build_ddl(SQL.rename_column(table, from, to)) do
+      Connection.run(source, fn conn -> exec_ddl(conn, statement) end)
+    end
+  end
+
+  @doc "Renames a table. Returns `:ok` or `{:error, message}`."
+  @spec rename_table(source(), String.t(), String.t()) :: :ok | {:error, String.t()}
+  def rename_table(source, table, new_name) do
+    with :ok <- validate_name("Table name", table),
+         :ok <- validate_name("New table name", new_name),
+         {:ok, statement} <- build_ddl(SQL.rename_table(table, new_name)) do
+      Connection.run(source, fn conn -> exec_ddl(conn, statement) end)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Private — introspection queries
   # ---------------------------------------------------------------------------
 
@@ -416,6 +485,28 @@ defmodule Lantern do
       {:error, error} -> {:error, format_error(error)}
     end
   end
+
+  # Translates a SQL builder result into an executable statement or a
+  # human-readable validation message, before any connection is opened.
+  defp build_ddl({:ok, statement}), do: {:ok, statement}
+  defp build_ddl({:error, reason}), do: {:error, ddl_error(reason)}
+
+  defp exec_ddl(conn, {sql, params}) do
+    with {:ok, _result} <- run_sql(conn, sql, params), do: :ok
+  end
+
+  defp validate_name(label, name) do
+    if is_binary(name) and String.trim(name) != "" do
+      :ok
+    else
+      {:error, "#{label} can't be blank"}
+    end
+  end
+
+  defp ddl_error(:no_columns), do: "Add at least one column"
+  defp ddl_error(:missing_name), do: "Every column needs a name"
+  defp ddl_error({:invalid_type, type}), do: "Unsupported column type: #{type}"
+  defp ddl_error(other), do: format_error(other)
 
   defp single_row(%{columns: cols, rows: [row | _]}), do: Enum.zip(cols, row) |> Map.new()
   defp single_row(%{columns: cols, rows: []}), do: cols |> Enum.map(&{&1, nil}) |> Map.new()

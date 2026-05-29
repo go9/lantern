@@ -21,6 +21,90 @@ defmodule Lantern.SQL do
 
   @type field :: %{column: String.t(), value: term(), cast: String.t() | nil}
 
+  @typedoc """
+  A column spec for DDL builders. `:name` and `:type` are required; `:nullable`
+  defaults to `true` and `:primary_key` to `false`.
+  """
+  @type column :: %{
+          required(:name) => String.t(),
+          required(:type) => String.t(),
+          optional(:nullable) => boolean(),
+          optional(:primary_key) => boolean()
+        }
+
+  # Column types accepted verbatim (no length/precision argument). DDL cannot
+  # bind types as parameters, so this allowlist is the injection boundary for
+  # the type portion of a column definition — identifiers are handled by
+  # `quote_ident/1`.
+  @simple_types MapSet.new([
+                  "smallint",
+                  "integer",
+                  "bigint",
+                  "smallserial",
+                  "serial",
+                  "bigserial",
+                  "int2",
+                  "int4",
+                  "int8",
+                  "serial2",
+                  "serial4",
+                  "serial8",
+                  "real",
+                  "double precision",
+                  "float4",
+                  "float8",
+                  "numeric",
+                  "decimal",
+                  "money",
+                  "boolean",
+                  "bool",
+                  "text",
+                  "varchar",
+                  "character varying",
+                  "char",
+                  "character",
+                  "uuid",
+                  "json",
+                  "jsonb",
+                  "bytea",
+                  "date",
+                  "time",
+                  "timetz",
+                  "timestamp",
+                  "timestamptz",
+                  "time with time zone",
+                  "time without time zone",
+                  "timestamp with time zone",
+                  "timestamp without time zone",
+                  "interval",
+                  "bit",
+                  "bit varying",
+                  "varbit",
+                  "inet",
+                  "cidr",
+                  "macaddr",
+                  "macaddr8",
+                  "xml"
+                ])
+
+  # Base types that may carry a `(n)` or `(n,m)` length/precision argument.
+  @parameterized_types MapSet.new([
+                         "varchar",
+                         "character varying",
+                         "char",
+                         "character",
+                         "numeric",
+                         "decimal",
+                         "bit",
+                         "bit varying",
+                         "varbit",
+                         "time",
+                         "timetz",
+                         "timestamp",
+                         "timestamptz",
+                         "interval"
+                       ])
+
   @doc "Quotes a Postgres identifier, escaping embedded double-quotes."
   @spec quote_ident(String.t()) :: String.t()
   def quote_ident(name) when is_binary(name) do
@@ -133,6 +217,103 @@ defmodule Lantern.SQL do
   end
 
   # ---------------------------------------------------------------------------
+  # DDL builders
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Builds a `CREATE TABLE`.
+
+  `columns` is a list of column specs (see `t:column/0`). Columns flagged
+  `primary_key: true` are collected into a single `PRIMARY KEY (...)` table
+  constraint, so composite keys work. Identifiers are quoted and every type is
+  validated against the allowlist.
+
+  Returns `{:error, :no_columns}` when `columns` is empty,
+  `{:error, :missing_name}` when a spec lacks a usable name, or
+  `{:error, {:invalid_type, type}}` for a disallowed type.
+  """
+  @spec create_table(String.t(), [column()]) ::
+          {:ok, {String.t(), []}}
+          | {:error, :no_columns | :missing_name | {:invalid_type, String.t()}}
+  def create_table(_table, []), do: {:error, :no_columns}
+
+  def create_table(table, columns) when is_binary(table) and is_list(columns) do
+    with {:ok, defs} <- column_definitions(columns) do
+      pk_cols =
+        columns
+        |> Enum.filter(&Map.get(&1, :primary_key, false))
+        |> Enum.map(&quote_ident(&1.name))
+
+      constraint = if pk_cols == [], do: [], else: ["PRIMARY KEY (#{Enum.join(pk_cols, ", ")})"]
+      body = Enum.join(defs ++ constraint, ", ")
+      {:ok, {"CREATE TABLE #{quote_ident(table)} (#{body})", []}}
+    end
+  end
+
+  @doc "Builds a `DROP TABLE`. No `CASCADE` — a table with dependents errors loudly."
+  @spec drop_table(String.t()) :: {:ok, {String.t(), []}}
+  def drop_table(table) when is_binary(table) do
+    {:ok, {"DROP TABLE #{quote_ident(table)}", []}}
+  end
+
+  @doc """
+  Builds an `ALTER TABLE ... ADD COLUMN`.
+
+  `column` is a single column spec (see `t:column/0`). Returns the same
+  validation errors as `create_table/2`.
+  """
+  @spec add_column(String.t(), column()) ::
+          {:ok, {String.t(), []}} | {:error, :missing_name | {:invalid_type, String.t()}}
+  def add_column(table, column) when is_binary(table) and is_map(column) do
+    with {:ok, definition} <- column_definition(column) do
+      {:ok, {"ALTER TABLE #{quote_ident(table)} ADD COLUMN #{definition}", []}}
+    end
+  end
+
+  @doc "Builds an `ALTER TABLE ... DROP COLUMN`."
+  @spec drop_column(String.t(), String.t()) :: {:ok, {String.t(), []}}
+  def drop_column(table, column) when is_binary(table) and is_binary(column) do
+    {:ok, {"ALTER TABLE #{quote_ident(table)} DROP COLUMN #{quote_ident(column)}", []}}
+  end
+
+  @doc "Builds an `ALTER TABLE ... RENAME COLUMN`."
+  @spec rename_column(String.t(), String.t(), String.t()) :: {:ok, {String.t(), []}}
+  def rename_column(table, from, to)
+      when is_binary(table) and is_binary(from) and is_binary(to) do
+    sql =
+      "ALTER TABLE #{quote_ident(table)} " <>
+        "RENAME COLUMN #{quote_ident(from)} TO #{quote_ident(to)}"
+
+    {:ok, {sql, []}}
+  end
+
+  @doc "Builds an `ALTER TABLE ... RENAME TO`."
+  @spec rename_table(String.t(), String.t()) :: {:ok, {String.t(), []}}
+  def rename_table(table, new_name) when is_binary(table) and is_binary(new_name) do
+    {:ok, {"ALTER TABLE #{quote_ident(table)} RENAME TO #{quote_ident(new_name)}", []}}
+  end
+
+  @doc """
+  Validates a column type against the allowlist, returning the normalized
+  (trimmed, downcased, single-spaced) form or `:error`.
+
+  Accepts bare types (`"bigint"`, `"text"`) and parameterized forms
+  (`"varchar(255)"`, `"numeric(10,2)"`) whose base type is allowlisted.
+  """
+  @spec validate_type(String.t()) :: {:ok, String.t()} | :error
+  def validate_type(type) when is_binary(type) do
+    normalized = type |> String.trim() |> String.downcase() |> collapse_spaces()
+
+    cond do
+      MapSet.member?(@simple_types, normalized) -> {:ok, normalized}
+      parameterized_type?(normalized) -> {:ok, normalized}
+      true -> :error
+    end
+  end
+
+  def validate_type(_), do: :error
+
+  # ---------------------------------------------------------------------------
   # Private
   # ---------------------------------------------------------------------------
 
@@ -165,6 +346,44 @@ defmodule Lantern.SQL do
   defp placeholder(%{cast: nil}, idx), do: "$#{idx}"
   defp placeholder(%{cast: cast}, idx) when is_binary(cast), do: "$#{idx}::text::#{cast}"
   defp placeholder(_field, idx), do: "$#{idx}"
+
+  defp column_definitions(columns) do
+    Enum.reduce_while(columns, {:ok, []}, fn column, {:ok, acc} ->
+      case column_definition(column) do
+        {:ok, definition} -> {:cont, {:ok, acc ++ [definition]}}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp column_definition(%{name: name, type: type} = column)
+       when is_binary(name) and is_binary(type) do
+    cond do
+      String.trim(name) == "" ->
+        {:error, :missing_name}
+
+      true ->
+        case validate_type(type) do
+          {:ok, normalized} ->
+            null_clause = if Map.get(column, :nullable, true), do: "", else: " NOT NULL"
+            {:ok, "#{quote_ident(name)} #{normalized}#{null_clause}"}
+
+          :error ->
+            {:error, {:invalid_type, type}}
+        end
+    end
+  end
+
+  defp column_definition(_), do: {:error, :missing_name}
+
+  defp parameterized_type?(type) do
+    case Regex.run(~r/^([a-z ]+)\(\d+(?:,\s*\d+)?\)$/, type) do
+      [_, base] -> MapSet.member?(@parameterized_types, String.trim(base))
+      _ -> false
+    end
+  end
+
+  defp collapse_spaces(str), do: String.replace(str, ~r/\s+/, " ")
 
   defp maybe_where(sql, clause) do
     if present?(clause), do: sql <> " WHERE #{clause}", else: sql

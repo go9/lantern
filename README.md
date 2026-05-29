@@ -13,6 +13,9 @@ bulk delete, type-aware inputs, foreign-key lookups, and fullscreen mode.
 - **Safe writes** — every value is sent as a cast text parameter
   (`$1::text::int4`), never interpolated into SQL. Edits and deletes are scoped
   to the row's primary key.
+- **Schema editing** — create and drop tables, add/rename/drop columns, and
+  rename tables from the UI or the data API. Identifiers are always quoted and
+  column types pass an allowlist, so DDL can't be used for injection.
 - **Themeable** — all styling is semantic `lt-*` classes in a low-priority
   cascade layer, driven by `--lt-*` CSS variables. Override a handful of
   variables, or any class, with zero specificity fights.
@@ -149,6 +152,21 @@ The data layer is usable on its own, without the component:
 
 Write values are passed as strings (or `nil` for SQL `NULL`) and cast to each
 column's type by Postgres.
+
+Schema changes (DDL) are available too. Identifiers are quoted and types are
+checked against an allowlist before anything touches the database:
+
+```elixir
+:ok = Lantern.create_table(source, "widgets", [
+        %{name: "id", type: "bigserial", nullable: false, primary_key: true},
+        %{name: "label", type: "text"}
+      ])
+:ok = Lantern.add_column(source, "widgets", %{name: "qty", type: "integer"})
+:ok = Lantern.rename_column(source, "widgets", "label", "name")
+:ok = Lantern.drop_column(source, "widgets", "qty")
+:ok = Lantern.rename_table(source, "widgets", "gadgets")
+:ok = Lantern.drop_table(source, "gadgets")
+```
 
 ## Security
 
