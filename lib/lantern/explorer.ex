@@ -42,8 +42,9 @@ defmodule Lantern.Explorer do
   button, and live JSON validation need the `LanternGrid` JS hook registered in
   your LiveSocket — see the README for setup.
 
-  Editing notes: rows are edited/deleted by primary key, so tables without one
-  are read-only. An empty input is written as SQL `NULL`.
+  Editing notes: rows are edited/deleted by primary key, so a table without one
+  is insert-only — you can still add rows, but existing rows can't be edited or
+  deleted. An empty input is written as SQL `NULL`.
   """
   use Phoenix.LiveComponent
 
@@ -702,7 +703,13 @@ defmodule Lantern.Explorer do
   def render(assigns) do
     assigns =
       assign(assigns,
+        # `editable` gates editing/deleting EXISTING rows — that needs a primary
+        # key to address a row. `insertable` gates ADDING rows, which a table can
+        # always do (a PK isn't required to INSERT), so it's on for any loaded
+        # table. A PK-less table is therefore insert-only: add rows, but no
+        # inline edit or delete.
         editable: assigns.primary_keys != [],
+        insertable: assigns.result_columns != [],
         page_size: @page_size,
         pages: total_pages(assigns.count)
       )
@@ -834,7 +841,7 @@ defmodule Lantern.Explorer do
                   <.icon name="hero-trash" class="lt-icon" /> Delete ({MapSet.size(@selected)})
                 </button>
                 <button
-                  :if={@editable}
+                  :if={@insertable}
                   type="button"
                   class="lt-btn"
                   phx-click="new_row"
@@ -888,7 +895,7 @@ defmodule Lantern.Explorer do
             </div>
 
             <div :if={not @editable} class="lt-note">
-              This table has no primary key — rows are read-only.
+              This table has no primary key — you can add rows, but existing rows can't be edited or deleted.
             </div>
 
             <div
@@ -927,7 +934,7 @@ defmodule Lantern.Explorer do
                       </span>
                       <span class="lt-resize" data-col={col} />
                     </th>
-                    <th :if={@editable} class="lt-th-actions"></th>
+                    <th :if={@editable or @insertable} class="lt-th-actions"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -942,7 +949,7 @@ defmodule Lantern.Explorer do
                         value={nil}
                       />
                     </td>
-                    <td :if={@editable} class="lt-td-edit">
+                    <td :if={@editable or @insertable} class="lt-td-edit">
                       <form
                         id={"#{@dom_id}-insert"}
                         phx-submit="save_insert"
@@ -1020,8 +1027,9 @@ defmodule Lantern.Explorer do
                       >
                         {render_cell(cell, @col_meta[col])}
                       </td>
-                      <td :if={@editable} class="lt-td-actions">
+                      <td :if={@editable or @insertable} class="lt-td-actions">
                         <button
+                          :if={@editable}
                           type="button"
                           phx-click="edit_row"
                           phx-value-index={index}

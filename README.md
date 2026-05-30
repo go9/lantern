@@ -12,7 +12,8 @@ bulk delete, type-aware inputs, foreign-key lookups, and fullscreen mode.
   no pool for you to supervise.
 - **Safe writes** — every value is sent as a cast text parameter
   (`$1::text::int4`), never interpolated into SQL. Edits and deletes are scoped
-  to the row's primary key.
+  to the row's primary key; a table without one is insert-only (you can add
+  rows, but not edit or delete existing ones).
 - **Schema editing** — create and drop tables, add/rename/drop columns, and
   rename tables from the UI or the data API. Identifiers are always quoted and
   column types pass an allowlist, so DDL can't be used for injection.

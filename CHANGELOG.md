@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-30
+
+### Changed
+
+- A table **without a primary key is now insert-only** rather than fully
+  read-only. The "New row" affordance stays available so rows can be added,
+  while inline edit and delete — which need a primary key to address an
+  existing row — remain disabled. `Lantern.Explorer` now derives `insertable`
+  (a table is loaded with columns) separately from `editable` (the table has a
+  primary key), and the empty-state note reflects the new behavior.
+
 ## [0.2.0] - 2026-05-29
 
 ### Added

@@ -89,6 +89,39 @@ defmodule Lantern.ExplorerEventTest do
     assert socket.assigns.count == 1
   end
 
+  test "a table with no primary key is insert-only: add rows works, even though edit/delete can't",
+       %{socket: socket} do
+    no_pk = "lantern_nopk_itest"
+
+    with_conn(fn conn ->
+      Postgrex.query!(conn, "DROP TABLE IF EXISTS #{no_pk}", [])
+      Postgrex.query!(conn, "CREATE TABLE #{no_pk} (a text, b integer)", [])
+    end)
+
+    on_exit(fn ->
+      with_conn(fn conn -> Postgrex.query!(conn, "DROP TABLE IF EXISTS #{no_pk}", []) end)
+    end)
+
+    {:noreply, socket} = Explorer.handle_event("select_table", %{"table" => no_pk}, socket)
+
+    # No primary key (so render gates edit/delete off) but the table is loaded
+    # with columns — `render/1` derives `insertable` from exactly these, so the
+    # "New row" affordance stays on.
+    assert socket.assigns.primary_keys == []
+    assert socket.assigns.result_columns != []
+
+    {:noreply, socket} = Explorer.handle_event("new_row", %{}, socket)
+    assert socket.assigns.inserting
+
+    {:noreply, socket} =
+      Explorer.handle_event("save_insert", %{"a" => "hello", "b" => "7"}, socket)
+
+    refute socket.assigns.error
+    refute socket.assigns.inserting
+    assert socket.assigns.count == 1
+    assert "hello" in flat_values(socket.assigns.rows)
+  end
+
   defp current_name(socket, row_index) do
     cols = socket.assigns.result_columns
     name_idx = Enum.find_index(cols, &(&1 == "name"))
