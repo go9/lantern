@@ -30,6 +30,11 @@ defmodule Lantern.ExplorerEventTest do
   end
 
   setup do
+    with_conn(fn conn ->
+      Postgrex.query!(conn, "TRUNCATE #{@table} RESTART IDENTITY", [])
+      Postgrex.query!(conn, "INSERT INTO #{@table} (name) VALUES ('Ada'), ('Grace')", [])
+    end)
+
     {:ok, socket} =
       Explorer.update(
         %{source: Lantern.TestDB.url(), id: "lt"},
@@ -78,7 +83,32 @@ defmodule Lantern.ExplorerEventTest do
 
     refute socket.assigns.error
     assert socket.assigns.editing == nil
+    assert length(socket.assigns.pending_changes) == 1
+
+    {:noreply, socket} = Explorer.handle_event("apply_pending", %{}, socket)
     assert "Augusta" in flat_values(socket.assigns.rows)
+  end
+
+  test "manual raw-filter events are ignored unless explicitly allowed", %{socket: socket} do
+    assert socket.assigns.allow_raw_filter == false
+    assert socket.assigns.count == 2
+
+    {:noreply, socket} =
+      Explorer.handle_event("filter", %{"where_clause" => "false"}, socket)
+
+    assert socket.assigns.where_clause == ""
+    assert socket.assigns.count == 2
+  end
+
+  test "malformed row indexes are ignored instead of crashing", %{socket: socket} do
+    {:noreply, socket} = Explorer.handle_event("toggle_row", %{"index" => "not-an-int"}, socket)
+    assert MapSet.size(socket.assigns.selected) == 0
+
+    {:noreply, socket} = Explorer.handle_event("edit_row", %{"index" => "999"}, socket)
+    assert socket.assigns.editing == nil
+
+    {:noreply, socket} = Explorer.handle_event("save_row", %{"_index" => "nope"}, socket)
+    assert socket.assigns.editing == nil
   end
 
   test "delete_selected reads col_meta without crashing", %{socket: socket} do
@@ -86,6 +116,9 @@ defmodule Lantern.ExplorerEventTest do
     {:noreply, socket} = Explorer.handle_event("delete_selected", %{}, socket)
 
     refute socket.assigns.error
+    assert length(socket.assigns.pending_changes) == 1
+
+    {:noreply, socket} = Explorer.handle_event("apply_pending", %{}, socket)
     assert socket.assigns.count == 1
   end
 
@@ -120,6 +153,61 @@ defmodule Lantern.ExplorerEventTest do
     refute socket.assigns.inserting
     assert socket.assigns.count == 1
     assert "hello" in flat_values(socket.assigns.rows)
+  end
+
+  test "set_chart_kind accepts bar/line/pie and ignores anything else",
+       %{socket: socket} do
+    # Default kind is :bar.
+    assert socket.assigns.chart_kind == :bar
+
+    {:noreply, socket} = Explorer.handle_event("set_chart_kind", %{"kind" => "line"}, socket)
+    assert socket.assigns.chart_kind == :line
+
+    {:noreply, socket} = Explorer.handle_event("set_chart_kind", %{"kind" => "pie"}, socket)
+    assert socket.assigns.chart_kind == :pie
+
+    # Unknown kind is a no-op (no crash, value unchanged) — important because the
+    # handler is not in @write_events and must be safe under :read_only too.
+    {:noreply, socket} = Explorer.handle_event("set_chart_kind", %{"kind" => "donut"}, socket)
+    assert socket.assigns.chart_kind == :pie
+  end
+
+  test "chart_column toggles a column on and back off", %{socket: socket} do
+    assert socket.assigns.chart_column == nil
+
+    {:noreply, socket} = Explorer.handle_event("chart_column", %{"column" => "id"}, socket)
+    assert socket.assigns.chart_column == "id"
+
+    # Same column again clears it.
+    {:noreply, socket} = Explorer.handle_event("chart_column", %{"column" => "id"}, socket)
+    assert socket.assigns.chart_column == nil
+
+    # Malformed params are ignored rather than crashing.
+    {:noreply, socket} = Explorer.handle_event("chart_column", %{}, socket)
+    assert socket.assigns.chart_column == nil
+  end
+
+  test "chart_column resets when the loaded columns no longer include it",
+       %{socket: socket} do
+    no_col = "lantern_chartreset_itest"
+
+    with_conn(fn conn ->
+      Postgrex.query!(conn, "DROP TABLE IF EXISTS #{no_col}", [])
+      Postgrex.query!(conn, "CREATE TABLE #{no_col} (other_id serial PRIMARY KEY, x text)", [])
+    end)
+
+    on_exit(fn ->
+      with_conn(fn conn -> Postgrex.query!(conn, "DROP TABLE IF EXISTS #{no_col}", []) end)
+    end)
+
+    {:noreply, socket} = Explorer.handle_event("chart_column", %{"column" => "id"}, socket)
+    assert socket.assigns.chart_column == "id"
+
+    # Switching to a table that has no "id" column clears the stale selection,
+    # because chart_column points at a positional column of the loaded rows.
+    {:noreply, socket} = Explorer.handle_event("select_table", %{"table" => no_col}, socket)
+    refute "id" in socket.assigns.result_columns
+    assert socket.assigns.chart_column == nil
   end
 
   defp current_name(socket, row_index) do

@@ -29,6 +29,7 @@ defmodule Lantern.CoercionTest do
     test "arrays cast via udt_name" do
       assert Coercion.cast_expr("ARRAY", "_int4") == "int4[]"
       assert Coercion.cast_expr("ARRAY", "_text") == "text[]"
+      assert Coercion.cast_expr("ARRAY", "_My Enum") == ~s("My Enum"[])
     end
 
     test "user-defined types cast to the quoted udt name" do

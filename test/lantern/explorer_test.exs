@@ -31,6 +31,22 @@ defmodule Lantern.ExplorerTest do
     refute html =~ "Select a table to browse"
   end
 
+  test "renders root styling hooks" do
+    html =
+      render_component(Lantern.Explorer,
+        id: "lantern",
+        source: Lantern.TestDB.url(),
+        class: "my-admin-db",
+        theme: :dark,
+        style: "--lt-accent: #e0552d; --lt-height: 720px;"
+      )
+
+    assert html =~ "my-admin-db"
+    assert html =~ ~s(data-theme="dark")
+    assert html =~ "--lt-accent: #e0552d"
+    assert html =~ "--lt-height: 720px"
+  end
+
   test "surfaces a connection error for a bad source" do
     html =
       render_component(Lantern.Explorer,
@@ -39,6 +55,22 @@ defmodule Lantern.ExplorerTest do
       )
 
     assert html =~ "lt-error" or html =~ "Could not connect"
+  end
+
+  test "read_only renders the grid but hides every write affordance" do
+    html =
+      render_component(Lantern.Explorer,
+        id: "lantern",
+        source: Lantern.TestDB.url(),
+        read_only: true
+      )
+
+    assert html =~ "lt-grid"
+    refute html =~ "New row"
+    refute html =~ ~s(phx-click="edit_row")
+    refute html =~ ~s(phx-click="new_row")
+    refute html =~ ~s(phx-click="open_create_table")
+    refute html =~ ~s(phx-click="drop_table")
   end
 
   defp with_conn(fun) do

@@ -15,6 +15,11 @@ defmodule Lantern.SQLTest do
     test "escapes embedded double-quotes" do
       assert SQL.quote_ident(~s|we"ird|) == ~s|"we""ird"|
     end
+
+    test "quotes schema-qualified table identifiers" do
+      assert SQL.quote_table("ops", "events") == ~s|"ops"."events"|
+      assert SQL.quote_table(~s|we"ird|, ~s|ta"ble|) == ~s|"we""ird"."ta""ble"|
+    end
   end
 
   describe "select/6" do
@@ -38,6 +43,11 @@ defmodule Lantern.SQLTest do
       {desc, []} = SQL.select("users", nil, "name", :desc, 10, 0)
       assert asc =~ ~s|ORDER BY "name" ASC|
       assert desc =~ ~s|ORDER BY "name" DESC|
+    end
+
+    test "builds schema-qualified selects" do
+      {sql, []} = SQL.select("ops", "events", nil, nil, :asc, 10, 0)
+      assert sql == ~s|SELECT * FROM "ops"."events" LIMIT 10 OFFSET 0|
     end
 
     test "clamps negative limit/offset to zero" do
@@ -260,10 +270,41 @@ defmodule Lantern.SQLTest do
     end
   end
 
+  describe "alter_column_type/3" do
+    test "changes a column to a parameterized type" do
+      assert {:ok, {sql, []}} = SQL.alter_column_type("users", "nickname", "varchar(255)")
+      assert sql == ~s|ALTER TABLE "users" ALTER COLUMN "nickname" TYPE varchar(255)|
+    end
+
+    test "rejects an invalid type" do
+      assert {:error, {:invalid_type, "bogus"}} = SQL.alter_column_type("users", "c", "bogus")
+    end
+  end
+
+  describe "set_column_nullable/3" do
+    test "drops and sets not null" do
+      assert {:ok, {sql, []}} = SQL.set_column_nullable("users", "nickname", true)
+      assert sql == ~s|ALTER TABLE "users" ALTER COLUMN "nickname" DROP NOT NULL|
+
+      assert {:ok, {sql, []}} = SQL.set_column_nullable("users", "nickname", false)
+      assert sql == ~s|ALTER TABLE "users" ALTER COLUMN "nickname" SET NOT NULL|
+    end
+  end
+
   describe "rename_column/3" do
     test "renames a quoted column" do
       assert {:ok, {sql, []}} = SQL.rename_column("users", "nickname", "handle")
       assert sql == ~s|ALTER TABLE "users" RENAME COLUMN "nickname" TO "handle"|
+    end
+  end
+
+  describe "create_index/3 and drop_index/1" do
+    test "creates and drops a quoted index" do
+      assert {:ok, {sql, []}} = SQL.create_index("users", "users_email_idx", ["email"])
+      assert sql == ~s|CREATE INDEX "users_email_idx" ON "users" ("email")|
+
+      assert {:ok, {sql, []}} = SQL.drop_index("users_email_idx")
+      assert sql == ~s|DROP INDEX "users_email_idx"|
     end
   end
 

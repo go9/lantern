@@ -137,8 +137,8 @@ defmodule Lantern.Source do
 
   defp normalize_port(port) when is_binary(port) do
     case Integer.parse(port) do
-      {int, _} -> int
-      :error -> @default_port
+      {int, ""} -> int
+      _ -> :invalid
     end
   end
 

@@ -2,8 +2,8 @@
 
 An embeddable Postgres **table viewer and editor** for Phoenix LiveView. Hand
 it a database connection and drop the component into any LiveView — you get a
-sidebar of tables, a sortable/filterable grid, inline editing, row insertion,
-bulk delete, type-aware inputs, foreign-key lookups, and fullscreen mode.
+schema selector, sidebar of tables, a sortable/filterable grid, inline editing,
+row insertion, bulk delete, type-aware inputs, foreign-key lookups, and fullscreen mode.
 
 - **Drop-in** — one `live_component`, a stylesheet, and a JS hook. No Fluxon, no
   icon library, no design-system assumptions.
@@ -33,7 +33,7 @@ Add Lantern to your deps. From Hex:
 
 ```elixir
 def deps do
-  [{:lantern, "~> 0.1.0"}]
+  [{:lantern, "~> 0.3.0"}]
 end
 ```
 
@@ -45,8 +45,9 @@ def deps do
 end
 ```
 
-Lantern needs `phoenix_live_view ~> 1.0`, `postgrex`, and `jason` (all pulled in
-transitively).
+Lantern needs `phoenix_live_view ~> 1.1`, `postgrex`, and `jason` (all pulled in
+transitively). LiveView 1.1 is required because dialogs render through
+`Phoenix.Component.portal/1`.
 
 ## Quick start
 
@@ -107,7 +108,42 @@ variables on `.lantern` (or a parent):
 }
 ```
 
-Force dark mode with `.lantern.lt-dark`; otherwise it follows the OS setting.
+You can also set styling hooks directly on the component:
+
+```elixir
+<.live_component
+  module={Lantern.Explorer}
+  id="db"
+  source={...}
+  class="my-admin-db"
+  theme={:dark}
+  style="--lt-accent: #e0552d; --lt-height: 720px;"
+/>
+```
+
+Styling assigns:
+
+| Assign | Values | Purpose |
+| --- | --- | --- |
+| `:class` | string/list | Extra classes appended to the root `.lantern` element. |
+| `:theme` | `:system`, `:light`, `:dark` | Sets `data-theme`; `:system` follows `prefers-color-scheme`. |
+| `:style` | string | Inline style for quick CSS-variable overrides. |
+
+Theme variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `--lt-bg`, `--lt-bg-subtle`, `--lt-bg-hover` | Surfaces and hover states. |
+| `--lt-fg`, `--lt-fg-muted` | Text colors. |
+| `--lt-border`, `--lt-ring` | Borders and focus rings. |
+| `--lt-accent`, `--lt-danger`, `--lt-success` | Action/status colors. |
+| `--lt-font`, `--lt-mono` | UI and monospace fonts. |
+| `--lt-text`, `--lt-text-sm` | Base and small text sizes. |
+| `--lt-radius`, `--lt-radius-sm` | Corner radii. |
+| `--lt-height` | Fixed explorer shell height. |
+
+Force dark mode with `theme={:dark}` or `data-theme="dark"`; force light mode
+with `theme={:light}` or `data-theme="light"`. Omit it to follow the OS setting.
 
 **Using Tailwind?** Optionally import the preset to map Lantern's variables onto
 your Tailwind color scale:
@@ -139,11 +175,16 @@ one-click NULL, and the JSON syntax highlight.)
 The data layer is usable on its own, without the component:
 
 ```elixir
-{:ok, tables}  = Lantern.list_tables(source)
+{:ok, schemas} = Lantern.list_schemas(source)
+{:ok, tables}  = Lantern.list_tables(source)                # defaults to schema: "public"
+{:ok, tables}  = Lantern.list_tables(source, schema: "ops")
+{:ok, stats}   = Lantern.table_stats(source, schema: "ops") # total/table/index sizes
 {:ok, columns} = Lantern.columns(source, "users")          # name, type, nullable, enum, fk
 {:ok, page}    = Lantern.query(source, "users",
-                   where_clause: "active = true",
+                   schema: "public",
+                   filters: [%{column: "email", op: "contains", value: "@example.com"}],
                    sort_by: "inserted_at", sort_dir: :desc,
+                   count: false,
                    limit: 50, offset: 0)
 
 {:ok, row}     = Lantern.insert(source, "users", %{"email" => "a@b.co"})
@@ -153,6 +194,9 @@ The data layer is usable on its own, without the component:
 
 Write values are passed as strings (or `nil` for SQL `NULL`) and cast to each
 column's type by Postgres.
+
+Pass `schema: "..."` to reads, writes, and DDL calls to target non-`public`
+Postgres schemas. Identifiers are schema-qualified and quoted safely.
 
 Schema changes (DDL) are available too. Identifiers are quoted and types are
 checked against an allowlist before anything touches the database:
@@ -193,6 +237,34 @@ You are responsible for:
 Because the connection is operator-supplied, Lantern itself adds no extra
 sandboxing; the trust boundary is your auth layer.
 
+### Read-only deployments
+
+For viewers you don't fully trust (a public dashboard, a support read-out),
+pass `read_only: true`:
+
+```elixir
+<.live_component module={Lantern.Explorer} id="db" source={...} read_only={true} />
+```
+
+It hides every write affordance (inline edit, row insert, bulk delete, and all
+DDL) **and** refuses the matching events server-side, and restricts the SQL
+workspace to `SELECT`/`EXPLAIN`. Browsing, filtering, sorting, foreign-key
+navigation, charts, and exports stay available.
+
+## Local demo
+
+Lantern ships with a local-only Phoenix demo app backed by a disposable Postgres
+fixture database:
+
+```bash
+cd examples/demo
+docker compose up -d
+mix setup
+mix phx.server
+```
+
+Open <http://localhost:4001>. See `examples/demo/README.md` for details.
+
 ## Development
 
 ```bash
@@ -210,4 +282,4 @@ LANTERN_TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/lantern_te
 
 ## License
 
-MIT © John Orlando. See [LICENSE](LICENSE).
+MIT © Giovanni Orlando. See [LICENSE](LICENSE).

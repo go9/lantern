@@ -4,6 +4,54 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.4.0] - 2026-06-08
+
+### Changed
+
+- Reworked `Lantern.Explorer` into a single window frame. A top bar now carries
+  the sidebar toggle, a `schema / table` breadcrumb, the Data/SQL view toggle,
+  settings, and fullscreen, and the sidebar, grid, and footer share the frame's
+  borders instead of floating as separate panels. The Data/SQL toggle no longer
+  takes its own row, and Settings moved from the sidebar into the top bar.
+- Minimum `phoenix_live_view` is now `~> 1.1` (dialogs use
+  `Phoenix.Component.portal/1`).
+
+### Added
+
+- `:read_only` option on `Lantern.Explorer` — a browse-only mode that hides
+  every write affordance (inline edit, row insert, bulk delete, and all DDL)
+  *and* refuses the matching events server-side, and restricts the SQL
+  workspace to `SELECT`/`EXPLAIN`. Intended for public or untrusted-viewer
+  deployments.
+- Themeable per-type cell tints (`--lt-cell-number`, `--lt-cell-temporal`,
+  `--lt-cell-boolean`, `--lt-cell-json`) so a column's type reads at a glance,
+  plus `--lt-bg-code` and `--lt-shadow` variables.
+- **Row detail drawer** — a row's expand button opens a side panel with the full
+  record: every column labeled with its type, full (un-truncated) values,
+  pretty-printed JSON, and clickable foreign keys.
+- **Cell context menu** — right-click a cell to copy its value, filter the grid
+  by that value, or open a foreign-key reference. All three are reads, so they
+  work in `:read_only` mode.
+- Grid browsing niceties: a type label under each data-grid column header,
+  right-aligned tabular numerics, booleans as distinct `true`/`false` text, and
+  a click-to-peek popover that pretty-prints JSON and expands truncated values.
+- Quick-chart **Bar / Line / Pie** selector. The SQL workspace chart (and a new
+  "chart this column" affordance on numeric data-grid headers) can render as a
+  horizontal bar chart, an inline-SVG line chart, or an inline-SVG pie chart
+  with a legend — all dependency-free (no chart library) and fully available in
+  `:read_only` mode. Pie slices cycle through the existing `--lt-cell-*` /
+  `--lt-accent` tokens, so charts stay themed in light and dark.
+
+### Fixed
+
+- Dialogs render through a portal onto `<body>`, so a modal can no longer be
+  clipped by a host page's `overflow` or `transform`.
+- The settings popover is no longer clipped by the sidebar's overflow.
+- Fullscreen fills the viewport even when the host page constrains the
+  component's width (for example, a centered `max-width` container).
+
 ## [0.3.0] - 2026-05-30
 
 ### Changed

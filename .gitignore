@@ -2,6 +2,8 @@
 /_build/
 /cover/
 /deps/
+/examples/*/_build/
+/examples/*/deps/
 /doc/
 /.fetch
 erl_crash.dump
@@ -11,3 +13,9 @@ lantern-*.tar
 
 # Environment
 .env
+
+# Local agent / editor tooling
+/.claude/
+/.go9/
+/.serena/
+/.expert/

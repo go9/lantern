@@ -11,11 +11,14 @@ defmodule LanternTest do
   @moduletag :integration
 
   @table "lantern_itest"
+  @schema "lantern_alt_schema_itest"
+  @schema_table "widgets"
 
   setup_all do
     source = repo_source()
 
     with_raw_conn(source, fn conn ->
+      Postgrex.query!(conn, "DROP SCHEMA IF EXISTS #{@schema} CASCADE", [])
       Postgrex.query!(conn, "DROP TABLE IF EXISTS #{@table}", [])
 
       Postgrex.query!(
@@ -32,10 +35,19 @@ defmodule LanternTest do
         """,
         []
       )
+
+      Postgrex.query!(conn, "CREATE SCHEMA #{@schema}", [])
+
+      Postgrex.query!(
+        conn,
+        "CREATE TABLE #{@schema}.#{@schema_table} (id serial PRIMARY KEY, label text NOT NULL)",
+        []
+      )
     end)
 
     on_exit(fn ->
       with_raw_conn(source, fn conn ->
+        Postgrex.query!(conn, "DROP SCHEMA IF EXISTS #{@schema} CASCADE", [])
         Postgrex.query!(conn, "DROP TABLE IF EXISTS #{@table}", [])
       end)
     end)
@@ -46,6 +58,7 @@ defmodule LanternTest do
   setup %{source: source} do
     with_raw_conn(source, fn conn ->
       Postgrex.query!(conn, "TRUNCATE #{@table} RESTART IDENTITY", [])
+      Postgrex.query!(conn, "TRUNCATE #{@schema}.#{@schema_table} RESTART IDENTITY", [])
     end)
 
     :ok
@@ -54,6 +67,49 @@ defmodule LanternTest do
   test "list_tables includes the fixture table", %{source: source} do
     assert {:ok, tables} = Lantern.list_tables(source)
     assert @table in tables
+  end
+
+  test "lists and queries non-public schemas", %{source: source} do
+    assert {:ok, schemas} = Lantern.list_schemas(source)
+    assert "public" in schemas
+    assert @schema in schemas
+
+    assert {:ok, [@schema_table]} = Lantern.list_tables(source, schema: @schema)
+
+    assert {:ok, row} =
+             Lantern.insert(source, @schema_table, %{"label" => "Alt"}, schema: @schema)
+
+    assert row["label"] == "Alt"
+
+    assert {:ok, page} = Lantern.query(source, @schema_table, schema: @schema)
+    assert page.columns == ["id", "label"]
+    assert page.count == 1
+    assert List.first(page.rows) |> Enum.at(1) == "Alt"
+  end
+
+  test "public schema remains the default", %{source: source} do
+    assert {:ok, tables} = Lantern.list_tables(source)
+    assert @table in tables
+    refute @schema_table in tables
+  end
+
+  test "table_stats returns table sizes for a schema", %{source: source} do
+    {:ok, _row} = Lantern.insert(source, @table, %{"name" => "Ada"})
+
+    assert {:ok, stats} = Lantern.table_stats(source)
+    stat = Enum.find(stats, &(&1.name == @table))
+
+    assert stat.total_bytes > 0
+    assert stat.table_bytes >= 0
+    assert stat.index_bytes >= 0
+    assert is_binary(stat.total_size)
+    assert is_binary(stat.table_size)
+    assert is_binary(stat.index_size)
+  end
+
+  test "table_stats supports non-public schemas", %{source: source} do
+    assert {:ok, stats} = Lantern.table_stats(source, schema: @schema)
+    assert Enum.any?(stats, &(&1.name == @schema_table))
   end
 
   test "columns returns typed metadata", %{source: source} do
@@ -142,6 +198,28 @@ defmodule LanternTest do
     assert length(rows) == 2
   end
 
+  test "query supports safe parameterized filters and count off", %{source: source} do
+    Lantern.insert(source, @table, %{"name" => "Ada", "age" => "36"})
+    Lantern.insert(source, @table, %{"name" => "Bob", "age" => "41"})
+
+    assert {:ok, page} =
+             Lantern.query(source, @table,
+               filters: [%{column: "name", op: "contains", value: "ad"}],
+               count: false
+             )
+
+    assert page.count == nil
+    assert page.count_kind == :none
+    assert length(page.rows) == 1
+    assert page.rows |> hd() |> Enum.at(1) == "Ada"
+  end
+
+  test "run_query executes trusted SQL", %{source: source} do
+    assert {:ok, result} = Lantern.run_query(source, "SELECT 42 AS answer")
+    assert result.columns == ["answer"]
+    assert result.rows == [[42]]
+  end
+
   test "query rejects an unknown sort column", %{source: source} do
     assert {:error, message} = Lantern.query(source, @table, sort_by: "nope")
     assert message =~ "Invalid sort column"
@@ -213,7 +291,7 @@ defmodule LanternTest do
 
     assert {:ok, cols} = Lantern.columns(source, "lantern_post_itest")
     author = Enum.find(cols, &(&1.name == "author_id"))
-    assert author.fk == %{table: "lantern_author_itest", column: "id"}
+    assert author.fk == %{schema: "public", table: "lantern_author_itest", column: "id"}
 
     id = Enum.find(cols, &(&1.name == "id"))
     assert id.fk == nil
@@ -292,6 +370,18 @@ defmodule LanternTest do
       assert :ok = Lantern.drop_column(source, @ddl_table, "handle")
       {:ok, cols} = Lantern.columns(source, @ddl_table)
       refute "handle" in Enum.map(cols, & &1.name)
+    end
+
+    test "alter column type and nullability round-trip", %{source: source} do
+      :ok = Lantern.create_table(source, @ddl_table, [%{name: "name", type: "text"}])
+
+      assert :ok = Lantern.alter_column_type(source, @ddl_table, "name", "varchar(255)")
+      assert :ok = Lantern.set_column_nullable(source, @ddl_table, "name", false)
+
+      {:ok, cols} = Lantern.columns(source, @ddl_table)
+      name = Enum.find(cols, &(&1.name == "name"))
+      assert name.type == "character varying"
+      assert name.nullable == false
     end
 
     test "rename_table renames the table", %{source: source} do

@@ -38,7 +38,7 @@ defmodule Lantern.Coercion do
 
   def cast_expr("ARRAY", udt_name) when is_binary(udt_name) do
     base = String.replace_prefix(udt_name, "_", "")
-    "#{base}[]"
+    "#{quote_type_if_needed(base)}[]"
   end
 
   def cast_expr("USER-DEFINED", udt_name) when is_binary(udt_name), do: quote_type(udt_name)
@@ -183,6 +183,10 @@ defmodule Lantern.Coercion do
 
   # Quote a user-defined type name so an enum like `my type` casts correctly.
   defp quote_type(name), do: ~s("#{String.replace(name, ~s("), ~s(""))}")
+
+  defp quote_type_if_needed(name) do
+    if Regex.match?(~r/^[a-z_][a-z0-9_]*$/, name), do: name, else: quote_type(name)
+  end
 
   defp uuid_string(
          <<a::binary-size(4), b::binary-size(2), c::binary-size(2), d::binary-size(2),

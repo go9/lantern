@@ -1,7 +1,7 @@
 defmodule Lantern.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.4.0"
   @source_url "https://github.com/go9/lantern"
 
   def project do
@@ -31,7 +31,8 @@ defmodule Lantern.MixProject do
 
   defp deps do
     [
-      {:phoenix_live_view, "~> 1.0"},
+      {:phoenix_live_view, "~> 1.1"},
+      {:livecode, path: "../livecode"},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
@@ -46,7 +47,7 @@ defmodule Lantern.MixProject do
 
   defp package do
     [
-      maintainers: ["John Orlando"],
+      maintainers: ["Giovanni Orlando"],
       licenses: ["MIT"],
       links: %{"GitHub" => @source_url, "Changelog" => @source_url <> "/blob/main/CHANGELOG.md"},
       files: ~w(lib priv/static/lantern .formatter.exs mix.exs README.md LICENSE CHANGELOG.md)

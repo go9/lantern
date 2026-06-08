@@ -84,6 +84,18 @@ defmodule Lantern.SourceTest do
                Source.from(%{hostname: "h", username: "u", database: "d", port: "5555"})
     end
 
+    test "rejects malformed string ports" do
+      assert {:error, message} =
+               Source.from(%{hostname: "h", username: "u", database: "d", port: "5555abc"})
+
+      assert message =~ "invalid port"
+
+      assert {:error, message} =
+               Source.from(%{hostname: "h", username: "u", database: "d", port: "abc"})
+
+      assert message =~ "invalid port"
+    end
+
     test "defaults database to postgres when absent" do
       assert {:ok, %Source{database: "postgres"}} =
                Source.from(%{hostname: "h", username: "u"})
