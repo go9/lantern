@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-06-08
+
+### Added
+
+- **Guarded SQL workspace mode** (`sql_mode: :guarded`). A write-enabled middle
+  ground between `:trusted` and `:read_only`: ordinary statements run, but a
+  destructive one — `DROP`, `TRUNCATE`, or a `DELETE`/`UPDATE` with no `WHERE`
+  clause — is held and surfaces a confirmation dialog (an `alertdialog` portal
+  showing the exact statement) before it runs. `confirm_sql` / `cancel_sql`
+  events drive it; `destructive_sql?/1` is the (heuristic, word-boundary-aware)
+  detector and is unit-tested. The Run button's client `data-confirm` is
+  suppressed in guarded mode so the server dialog is the single prompt.
+
 ## [0.4.0] - 2026-06-08
 
 ### Changed

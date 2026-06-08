@@ -171,6 +171,7 @@ defmodule Lantern.Explorer do
       |> assign(:sql_history, [])
       |> assign(:saved_queries, [])
       |> assign(:sql_query_name, "")
+      |> assign(:sql_pending, nil)
       |> assign(:chart_kind, :bar)
       |> assign(:chart_column, nil)
       |> assign(:chart_label_column, nil)
@@ -339,6 +340,17 @@ defmodule Lantern.Explorer do
   def handle_event("copy_sql_json", _params, socket) do
     {:noreply,
      push_event(socket, "lantern:copy", %{content: export_sql_content("json", socket.assigns)})}
+  end
+
+  def handle_event("confirm_sql", _params, socket) do
+    case socket.assigns.sql_pending do
+      nil -> {:noreply, socket}
+      sql -> run_confirmed_sql(assign(socket, sql_pending: nil), sql)
+    end
+  end
+
+  def handle_event("cancel_sql", _params, socket) do
+    {:noreply, assign(socket, sql_pending: nil)}
   end
 
   def handle_event("toggle_column", %{"column" => column}, socket) do
@@ -1063,6 +1075,9 @@ defmodule Lantern.Explorer do
           not read_only_sql?(sql) ->
         {:noreply, assign(socket, sql_text: sql, sql_error: "SQL workspace is in read-only mode")}
 
+      socket.assigns.sql_mode == :guarded and destructive_sql?(sql) ->
+        {:noreply, assign(socket, sql_text: sql, sql_pending: sql)}
+
       true ->
         case Lantern.run_query(socket.assigns.source, sql) do
           {:ok, %{columns: columns, rows: rows}} ->
@@ -1085,6 +1100,30 @@ defmodule Lantern.Explorer do
           {:error, reason} ->
             {:noreply, assign(socket, sql_text: sql, sql_error: humanize(reason))}
         end
+    end
+  end
+
+  defp run_confirmed_sql(socket, sql) do
+    case Lantern.run_query(socket.assigns.source, sql) do
+      {:ok, %{columns: columns, rows: rows}} ->
+        history =
+          [sql | socket.assigns.sql_history]
+          |> Enum.uniq()
+          |> Enum.take(25)
+
+        {:noreply,
+         socket
+         |> assign(
+           sql_text: sql,
+           sql_columns: columns,
+           sql_rows: rows,
+           sql_error: nil,
+           sql_history: history
+         )
+         |> persist_sql_state()}
+
+      {:error, reason} ->
+        {:noreply, assign(socket, sql_text: sql, sql_error: humanize(reason))}
     end
   end
 
@@ -1136,6 +1175,8 @@ defmodule Lantern.Explorer do
   defp normalize_sql_mode(mode) when mode in [:read_only, "read_only", "read-only"],
     do: :read_only
 
+  defp normalize_sql_mode(mode) when mode in [:guarded, "guarded"], do: :guarded
+
   defp normalize_sql_mode(_mode), do: :trusted
 
   defp dangerous_sql?(sql) do
@@ -1151,6 +1192,29 @@ defmodule Lantern.Explorer do
     |> String.downcase()
     |> then(&(String.starts_with?(&1, "select") or String.starts_with?(&1, "explain")))
   end
+
+  # Best-effort detector for statements the `:guarded` SQL mode holds for an
+  # explicit confirm: DROP, TRUNCATE, and DELETE/UPDATE with no WHERE clause (a
+  # full-table wipe/rewrite). Public + `@doc false` only so the detector — the
+  # safety boundary — is unit-testable without a database. Heuristic, not a
+  # parser: it errs toward prompting, and the WHERE check uses a word boundary so
+  # a table literally named `wherehouse` can't slip a DELETE through unconfirmed.
+  @doc false
+  def destructive_sql?(sql) when is_binary(sql) do
+    normalized = sql |> String.trim_leading() |> String.downcase()
+
+    cond do
+      String.starts_with?(normalized, "drop") -> true
+      String.starts_with?(normalized, "truncate") -> true
+      String.starts_with?(normalized, "delete") and not has_where_clause?(normalized) -> true
+      String.starts_with?(normalized, "update") and not has_where_clause?(normalized) -> true
+      true -> false
+    end
+  end
+
+  def destructive_sql?(_), do: false
+
+  defp has_where_clause?(normalized), do: normalized =~ ~r/\bwhere\b/
 
   defp persist_sql_state(socket) do
     push_event(socket, "lantern:persist-sql-state", %{
@@ -2377,9 +2441,15 @@ defmodule Lantern.Explorer do
                   class="lt-sql-editor"
                 />
                 <div class="lt-sql-actions">
-                  <span class="lt-note">{if @read_only or @sql_mode == :read_only, do: "Read-only SQL mode. SELECT and EXPLAIN only.", else: "Trusted operator SQL. Runs with the supplied connection role."}</span>
+                  <span class="lt-note">
+                    {cond do
+                      @read_only or @sql_mode == :read_only -> "Read-only SQL mode. SELECT and EXPLAIN only."
+                      @sql_mode == :guarded -> "Write-enabled · DROP, TRUNCATE, and unqualified DELETE/UPDATE require confirmation."
+                      true -> "Trusted operator SQL. Runs with the supplied connection role."
+                    end}
+                  </span>
                   <div class="lt-sql-buttons">
-                    <button id={"#{@dom_id}-run-sql"} type="submit" name="action" value="run" class="lt-btn lt-btn-primary" data-confirm={dangerous_sql?(@sql_text) && "Run potentially destructive SQL?"}>Run query</button>
+                    <button id={"#{@dom_id}-run-sql"} type="submit" name="action" value="run" class="lt-btn lt-btn-primary" data-confirm={@sql_mode not in [:guarded] and dangerous_sql?(@sql_text) && "Run potentially destructive SQL?"}>Run query</button>
                     <button type="submit" name="action" value="explain" class="lt-btn">Explain</button>
                     <button type="submit" name="action" value="analyze" class="lt-btn">Analyze</button>
                   </div>
@@ -3104,6 +3174,27 @@ defmodule Lantern.Explorer do
                     {render_cell(cell, @col_meta[col], @bytea_display)}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </.portal>
+
+      <.portal :if={@sql_pending} id={"#{@dom_id}-confirm-portal"} target="body">
+        <div class={["lantern lt-dialog-portal", @class]} data-theme={@theme} style={root_style(@editor_font_size, @style)}>
+          <div class="lt-modal" role="alertdialog" aria-modal="true" aria-labelledby={"#{@dom_id}-confirm-title"} aria-describedby={"#{@dom_id}-confirm-desc"}>
+            <div class="lt-modal-backdrop" />
+            <div class="lt-modal-card">
+              <div class="lt-modal-head">
+                <h3 id={"#{@dom_id}-confirm-title"} class="lt-modal-title">Confirm destructive SQL</h3>
+              </div>
+              <div class="lt-modal-body">
+                <p id={"#{@dom_id}-confirm-desc"} class="lt-note">This statement permanently modifies or removes data and cannot be undone. Review it carefully before running.</p>
+                <pre class="lt-code-preview">{@sql_pending}</pre>
+              </div>
+              <div class="lt-modal-foot">
+                <button type="button" class="lt-btn" phx-click="cancel_sql" phx-target={@myself}>Cancel</button>
+                <button type="button" class="lt-btn lt-btn-danger" phx-click="confirm_sql" phx-target={@myself}>Run anyway</button>
               </div>
             </div>
           </div>
