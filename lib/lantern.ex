@@ -1064,7 +1064,7 @@ defmodule Lantern do
   defp single_row(%{columns: cols, rows: [row | _]}), do: Enum.zip(cols, row) |> Map.new()
   defp single_row(%{columns: cols, rows: []}), do: cols |> Enum.map(&{&1, nil}) |> Map.new()
 
-  defp format_error(%Postgrex.Error{postgres: %{message: message}}), do: message
-  defp format_error(%Postgrex.Error{message: message}) when is_binary(message), do: message
-  defp format_error(reason), do: inspect(reason)
+  # All DB/query errors humanize through one place so nothing reaches the UI as
+  # a raw struct (connection failures, Postgres errors, hints). See Lantern.Errors.
+  defp format_error(reason), do: Lantern.Errors.humanize(reason)
 end

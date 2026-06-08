@@ -42,13 +42,13 @@ defmodule Lantern.Connection do
         try do
           fun.(conn)
         catch
-          :exit, reason -> {:error, "Could not connect to database: #{inspect(reason)}"}
+          :exit, _reason -> {:error, Lantern.Errors.connection_error()}
         after
           stop(conn)
         end
 
-      {:error, reason} ->
-        {:error, "Could not connect to database: #{inspect(reason)}"}
+      {:error, _reason} ->
+        {:error, Lantern.Errors.connection_error()}
     end
   end
 

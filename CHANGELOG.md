@@ -6,6 +6,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-06-08
+
+### Changed
+
+- **Honest, struct-free error copy.** Database and query errors now route
+  through a single `Lantern.Errors.humanize/1` chokepoint instead of being
+  `inspect/1`-dumped into the UI. An unreachable/asleep database (a
+  `%DBConnection.ConnectionError{}`, e.g. pool `:queue_timeout`) now reads
+  "Couldn't connect to this database. It may be starting up or unreachable; try
+  again in a moment." rather than a raw struct. The table browser, SQL
+  workspace, row editors, and connection setup all share this path.
+
+### Added
+
+- Query errors carry a short plain-language **hint** under the Postgres message —
+  the server's own `HINT:` when present, otherwise one derived from the SQLSTATE
+  (undefined table/column, syntax error, insufficient privilege, unique/foreign
+  key/not-null/check violations). `.lt-error` now honors newlines so the hint
+  sits on its own line.
+
 ## [0.5.0] - 2026-06-08
 
 ### Added

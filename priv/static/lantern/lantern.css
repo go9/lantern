@@ -383,6 +383,9 @@
     color: var(--lt-danger);
     padding: 0.5rem 0.75rem;
     font-size: var(--lt-text-sm);
+    /* Honor newlines so a query-error hint shows on its own line under the
+       message, while still collapsing incidental whitespace. */
+    white-space: pre-line;
   }
   /* Frame-level error: a full-width strip under the top bar. */
   .lantern > .lt-error {

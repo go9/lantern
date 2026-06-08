@@ -1897,7 +1897,9 @@ defmodule Lantern.Explorer do
   defp humanize(:no_fields), do: "Nothing to save."
   defp humanize(:no_key), do: "Cannot identify the row to update."
   defp humanize(:no_rows), do: "No rows selected."
-  defp humanize(reason), do: inspect(reason)
+  # Anything else (incl. a raw %DBConnection.ConnectionError{} reaching us from a
+  # load path) goes through the shared humanizer — never inspect a struct.
+  defp humanize(reason), do: Lantern.Errors.humanize(reason)
 
   # The first column of a brand-new table defaults to an auto-incrementing
   # primary key; subsequent rows start as plain nullable text.
