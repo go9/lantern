@@ -1,0 +1,11 @@
+# Dependencies
+/deps
+/_build
+
+# Demo-specific
+/examples/demo/deps
+/examples/demo/_build
+
+# Dev artifacts
+*.swp
+.DS_Store

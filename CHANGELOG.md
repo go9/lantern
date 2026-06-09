@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-09
+
+### Changed
+
+- **Published to Hex.pm.** Lantern and its LiveCode dependency are now
+  available as Hex packages. The `livecode` path dependency in `mix.exs` is
+  replaced by `{:livecode, "~> 0.1"}`.
+
+### Added
+
+- **Hosted demo.** `examples/demo` now ships with an ephemeral sandbox flow:
+  visitors get a read-only view of the shared database; clicking "Get sandbox"
+  triggers a Cloudflare Turnstile challenge and, on success, spins up a fresh
+  private Postgres database seeded with the demo data. The sandbox auto-expires
+  after 5 minutes and is destroyed on disconnect.
+
 ## [0.6.0] - 2026-06-08
 
 ### Changed
