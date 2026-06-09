@@ -32,7 +32,7 @@ defmodule Lantern.MixProject do
   defp deps do
     [
       {:phoenix_live_view, "~> 1.1"},
-      {:livecode, path: "../livecode"},
+      {:livecode, "~> 0.1"},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
