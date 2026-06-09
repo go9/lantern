@@ -12,6 +12,56 @@ defmodule LanternDemo.DemoDB do
   @spec url() :: String.t()
   def url, do: System.get_env("LANTERN_DEMO_DATABASE_URL", @default_url)
 
+  @doc """
+  Creates a sandbox database, seeds it, and returns `{:ok, url, db_name}`.
+  The caller is responsible for eventually calling `drop_sandbox/1`.
+  """
+  @spec create_sandbox() :: {:ok, String.t(), String.t()} | {:error, String.t()}
+  def create_sandbox do
+    id = :crypto.strong_rand_bytes(6) |> Base.url_encode64(padding: false)
+    with {:ok, source} <- Lantern.Source.from(url()) do
+      db_name = "lantern_demo_sandbox_#{String.downcase(id)}"
+      sandbox_source = %{source | database: db_name}
+      sandbox_url = source_to_url(sandbox_source)
+
+      with :ok <- ensure_database_exists(sandbox_source),
+           {:ok, conn} <- Postgrex.start_link(Lantern.Source.to_postgrex_opts(sandbox_source)) do
+        try do
+          seed!(conn)
+          {:ok, sandbox_url, db_name}
+        rescue
+          exception -> {:error, Exception.message(exception)}
+        after
+          GenServer.stop(conn)
+        end
+      end
+    end
+  end
+
+  @doc "Drops a sandbox database created by `create_sandbox/0`."
+  @spec drop_sandbox(String.t()) :: :ok
+  def drop_sandbox(db_name) do
+    with {:ok, source} <- Lantern.Source.from(url()) do
+      maintenance_source = %{source | database: "postgres"}
+
+      case Postgrex.start_link(Lantern.Source.to_postgrex_opts(maintenance_source)) do
+        {:ok, conn} ->
+          try do
+            Postgrex.query!(conn, "DROP DATABASE IF EXISTS #{Lantern.SQL.quote_ident(db_name)}", [])
+          rescue
+            _ -> :ok
+          after
+            GenServer.stop(conn)
+          end
+
+        _ ->
+          :ok
+      end
+    end
+
+    :ok
+  end
+
   @doc "Creates the demo schema and deterministic sample data."
   @spec ensure() :: :ok | {:error, String.t()}
   def ensure do
@@ -216,6 +266,11 @@ defmodule LanternDemo.DemoDB do
         ('flicker-branch-cleanup', false, 'Waiting for hosted ephemeral branch workflow', now())
       """
     ]
+  end
+
+  defp source_to_url(%Lantern.Source{} = s) do
+    auth = if s.password, do: "#{URI.encode_www_form(s.username)}:#{URI.encode_www_form(s.password)}", else: URI.encode_www_form(s.username)
+    "postgres://#{auth}@#{s.hostname}:#{s.port}/#{s.database}"
   end
 
   defp query!(conn, sql), do: Postgrex.query!(conn, sql, [])

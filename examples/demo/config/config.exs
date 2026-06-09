@@ -12,3 +12,9 @@ config :lantern_demo, LanternDemoWeb.Endpoint,
   render_errors: [formats: [html: LanternDemoWeb.ErrorHTML], layout: false]
 
 config :phoenix, :json_library, Jason
+
+# Cloudflare Turnstile — default to always-pass test keys for local dev.
+# Override TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY in production.
+config :lantern_demo,
+  turnstile_site_key: System.get_env("TURNSTILE_SITE_KEY", "1x00000000000000000000AA"),
+  turnstile_secret_key: System.get_env("TURNSTILE_SECRET_KEY", "1x0000000000000000000000000000000AA")

@@ -29,7 +29,8 @@ defmodule LanternDemo.MixProject do
       {:phoenix_live_view, "~> 1.1"},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
-      {:bandit, "~> 1.7"}
+      {:bandit, "~> 1.7"},
+      {:req, "~> 0.5"}
     ]
   end
 

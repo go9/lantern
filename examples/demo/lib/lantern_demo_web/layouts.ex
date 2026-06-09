@@ -12,8 +12,13 @@ defmodule LanternDemoWeb.Layouts do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
         <title>Lantern Demo</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
         <link rel="stylesheet" href="/lantern/lantern.css" />
         <link rel="stylesheet" href="/livecode/livecode.css" />
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer>
+        </script>
         <script type="module" src="/app.js">
         </script>
         <style>
@@ -203,6 +208,90 @@ defmodule LanternDemoWeb.Layouts do
 
           .demo-actions button:hover {
             border-color: var(--demo-coral);
+          }
+
+          .demo-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: 1px solid var(--demo-border-local);
+            border-radius: 0.65rem;
+            background: var(--demo-card-local);
+            color: var(--demo-fg-local);
+            padding: 0.55rem 0.85rem;
+            font-size: 0.875rem;
+            font-weight: 660;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+          }
+
+          .demo-btn:hover { border-color: var(--demo-coral); }
+
+          .demo-btn-primary {
+            background: var(--demo-coral);
+            border-color: var(--demo-coral);
+            color: #fff;
+          }
+
+          .demo-btn-primary:hover {
+            background: var(--demo-ember);
+            border-color: var(--demo-ember);
+          }
+
+          .demo-btn-sm { padding: 0.35rem 0.65rem; font-size: 0.8rem; }
+
+          .demo-sandbox-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+          }
+
+          .demo-sandbox-desc { flex: 1; font-size: 0.9rem; }
+
+          .demo-sandbox-actions { display: flex; gap: 0.5rem; }
+
+          .demo-captcha-panel { text-align: center; }
+
+          .demo-captcha-hint {
+            margin: 0 0 1rem;
+            color: var(--demo-muted-local);
+            font-size: 0.9rem;
+          }
+
+          .demo-sandbox-active {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            border-color: oklch(0.62 0.19 145);
+          }
+
+          .demo-sandbox-live-dot {
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 50%;
+            background: oklch(0.62 0.19 145);
+            flex-shrink: 0;
+          }
+
+          .demo-sandbox-live-label {
+            font-weight: 660;
+            font-size: 0.875rem;
+            color: oklch(0.62 0.19 145);
+          }
+
+          .demo-sandbox-timer {
+            flex: 1;
+            color: var(--demo-muted-local);
+            font-size: 0.875rem;
+            font-variant-numeric: tabular-nums;
+          }
+
+          .demo-spinner-label {
+            color: var(--demo-muted-local);
+            font-size: 0.875rem;
           }
         </style>
       </head>

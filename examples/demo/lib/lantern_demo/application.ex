@@ -7,6 +7,7 @@ defmodule LanternDemo.Application do
   def start(_type, _args) do
     children = [
       {Phoenix.PubSub, name: LanternDemo.PubSub},
+      LanternDemo.SandboxManager,
       LanternDemoWeb.Endpoint
     ]
 

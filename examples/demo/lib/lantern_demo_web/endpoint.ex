@@ -34,6 +34,13 @@ defmodule LanternDemoWeb.Endpoint do
     only: ~w(livecode)
   )
 
+  plug(Plug.Static,
+    at: "/js",
+    from: {:phoenix_live_view, "priv/static"},
+    gzip: false,
+    only: ~w(phoenix_live_view.esm.js)
+  )
+
   plug(Plug.RequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
   plug(Plug.Parsers, parsers: [:urlencoded, :multipart], pass: ["*/*"])
