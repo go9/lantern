@@ -171,11 +171,16 @@ defmodule LanternDemoWeb.DemoLive do
         class="demo-panel demo-warning demo-sandbox-bar"
       >
         <div class="demo-sandbox-desc">
-          <strong>{if @sandbox == :expired, do: "Sandbox expired.", else: "Read-only demo."}</strong>
+          <span class="demo-readonly-badge">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M11.5 1A3.5 3.5 0 0 0 8 4.5V7H2.5A1.5 1.5 0 0 0 1 8.5v5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 13.5 7H10V4.5a1.5 1.5 0 0 1 3 0v1h1.5v-1A3.5 3.5 0 0 0 11.5 1z"/>
+            </svg>
+            Read-only
+          </span>
           {if @sandbox == :expired do
-            " Your 5-minute session ended and the database was deleted."
+            " Sandbox expired — your 5-minute session ended and the database was deleted."
           else
-            " Browse, sort, filter, and run read-only SQL on this shared database. Spin up a private 5-minute sandbox to edit, insert, and run DDL."
+            " You're browsing a shared database. Sorts, filters, and read-only SQL all work. Get a private sandbox to edit rows, insert data, or run DDL — no sign-up required."
           end}
           <span :if={match?({:error, _}, @sandbox)} style="color: inherit">
             {elem(@sandbox, 1)}
@@ -183,7 +188,7 @@ defmodule LanternDemoWeb.DemoLive do
         </div>
         <div class="demo-sandbox-actions">
           <button phx-click="request_sandbox" class="demo-btn demo-btn-primary">
-            {if @sandbox == :expired, do: "New sandbox", else: "Get sandbox"}
+            {if @sandbox == :expired, do: "New sandbox", else: "Try editing →"}
           </button>
         </div>
       </section>
@@ -208,10 +213,32 @@ defmodule LanternDemoWeb.DemoLive do
 
       <%!-- Active sandbox banner --%>
       <section :if={match?({:active, _, _, _}, @sandbox)} class="demo-panel demo-sandbox-active">
-        <span class="demo-sandbox-live-dot"></span>
-        <span class="demo-sandbox-live-label">Live sandbox</span>
-        <span class="demo-sandbox-timer">{format_time(elem(@sandbox, 3))} remaining</span>
-        <button phx-click="release_sandbox" class="demo-btn demo-btn-sm">End session</button>
+        <div class="demo-sandbox-active-top">
+          <span class="demo-sandbox-live-dot"></span>
+          <span class="demo-sandbox-live-label">Live sandbox — full read/write</span>
+          <span class="demo-sandbox-timer">{format_time(elem(@sandbox, 3))} remaining</span>
+          <button phx-click="release_sandbox" class="demo-btn demo-btn-sm">End session</button>
+        </div>
+        <div class="demo-sandbox-pitch">
+          <p class="demo-sandbox-pitch-text">
+            <strong>A real Postgres database was just provisioned for you in under 2 seconds.</strong>
+            It's isolated, writable, and self-destructs when you're done. This is what
+            <strong>Flicker</strong> does for every branch of every app you deploy — instant
+            preview databases on every pull request, no ops required.
+          </p>
+          <a
+            href="https://flickercloud.com"
+            target="_blank"
+            rel="noopener"
+            class="demo-flicker-link"
+          >
+            Build on Flicker
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
+              <path d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
+            </svg>
+          </a>
+        </div>
       </section>
 
       <%!-- Demo DB unavailable --%>

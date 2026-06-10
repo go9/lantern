@@ -260,12 +260,34 @@ defmodule LanternDemoWeb.Layouts do
             font-size: 0.9rem;
           }
 
+          .demo-readonly-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 0.4rem;
+            background: color-mix(in oklch, var(--demo-coral) 14%, transparent);
+            border: 1px solid color-mix(in oklch, var(--demo-coral) 38%, transparent);
+            color: var(--demo-coral);
+            font-size: 0.72rem;
+            font-weight: 740;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            flex-shrink: 0;
+          }
+
           .demo-sandbox-active {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            border-color: oklch(0.62 0.19 145);
+          }
+
+          .demo-sandbox-active-top {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             flex-wrap: wrap;
-            border-color: oklch(0.62 0.19 145);
           }
 
           .demo-sandbox-live-dot {
@@ -274,11 +296,17 @@ defmodule LanternDemoWeb.Layouts do
             border-radius: 50%;
             background: oklch(0.62 0.19 145);
             flex-shrink: 0;
+            animation: sandbox-pulse 2s ease-in-out infinite;
+          }
+
+          @keyframes sandbox-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
           }
 
           .demo-sandbox-live-label {
-            font-weight: 660;
-            font-size: 0.875rem;
+            font-weight: 680;
+            font-size: 0.9rem;
             color: oklch(0.62 0.19 145);
           }
 
@@ -287,6 +315,49 @@ defmodule LanternDemoWeb.Layouts do
             color: var(--demo-muted-local);
             font-size: 0.875rem;
             font-variant-numeric: tabular-nums;
+          }
+
+          .demo-sandbox-pitch {
+            padding-top: 0.75rem;
+            border-top: 1px solid color-mix(in oklch, oklch(0.62 0.19 145) 22%, var(--demo-border-local));
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+          }
+
+          .demo-sandbox-pitch-text {
+            flex: 1;
+            min-width: 200px;
+            font-size: 0.875rem;
+            color: var(--demo-muted-local);
+            line-height: 1.5;
+          }
+
+          .demo-sandbox-pitch-text strong {
+            color: var(--demo-fg-local);
+            font-weight: 660;
+          }
+
+          .demo-flicker-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.5rem 0.9rem;
+            border-radius: 0.65rem;
+            background: color-mix(in oklch, var(--demo-fg-local) 8%, transparent);
+            border: 1px solid var(--demo-border-local);
+            color: var(--demo-fg-local);
+            font-size: 0.85rem;
+            font-weight: 660;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: border-color 0.15s, background 0.15s;
+          }
+
+          .demo-flicker-link:hover {
+            border-color: var(--demo-coral);
+            background: color-mix(in oklch, var(--demo-coral) 8%, transparent);
           }
 
           .demo-spinner-label {
