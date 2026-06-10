@@ -48,11 +48,11 @@ defmodule LanternDemo.SandboxManager do
   @impl true
   def handle_call({:start, caller_pid}, _from, state) do
     case LanternDemo.DemoDB.create_sandbox() do
-      {:ok, url, db_name} ->
+      {:ok, url, sandbox_id} ->
         ref = make_ref()
         timer = Process.send_after(self(), {:expire, ref}, @ttl_seconds * 1_000)
         Process.monitor(caller_pid)
-        entry = %{db_name: db_name, timer: timer, pid: caller_pid}
+        entry = %{sandbox_id: sandbox_id, timer: timer, pid: caller_pid}
         {:reply, {:ok, %{url: url, ref: ref, ttl: @ttl_seconds}}, Map.put(state, ref, entry)}
 
       {:error, reason} ->
@@ -94,7 +94,7 @@ defmodule LanternDemo.SandboxManager do
 
       {entry, state} ->
         Process.cancel_timer(entry.timer)
-        LanternDemo.DemoDB.drop_sandbox(entry.db_name)
+        LanternDemo.DemoDB.drop_sandbox(entry.sandbox_id)
         state
     end
   end

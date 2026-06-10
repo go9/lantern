@@ -24,4 +24,11 @@ if config_env() == :prod do
   # Raise early here so a missing DB URL surfaces at startup, not on first request.
   System.get_env("LANTERN_DEMO_DATABASE_URL") ||
     raise "LANTERN_DEMO_DATABASE_URL environment variable is required"
+
+  # Flicker branch sandbox — required in prod so sandboxes use real Flicker branches.
+  config :lantern_demo,
+    flicker_api_key:
+      System.get_env("FLICKER_API_KEY") || raise("FLICKER_API_KEY required"),
+    flicker_database_id:
+      System.get_env("FLICKER_DATABASE_ID") || raise("FLICKER_DATABASE_ID required")
 end

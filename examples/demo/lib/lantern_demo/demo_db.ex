@@ -1,46 +1,77 @@
 defmodule LanternDemo.DemoDB do
   @moduledoc """
-  Creates and seeds the local database used by the Lantern demo.
+  Demo database management — seed data for the read-only view, and sandbox
+  creation/teardown for writable sessions.
 
-  The demo intentionally uses a database owned by the developer running it. It
-  never asks for production credentials and never persists connection strings.
+  **Sandbox strategy (prod):** Flicker branch API. Each sandbox is a fork of the
+  demo database's default branch — it inherits all seed data instantly, is
+  writable, and self-destructs via `ttl: "5m"` even if the app crashes. Set
+  `FLICKER_API_KEY` and `FLICKER_DATABASE_ID` to enable.
+
+  **Sandbox strategy (local dev):** raw `CREATE DATABASE` + seed + `DROP DATABASE`
+  when Flicker credentials are absent.
   """
 
+  require Logger
+
   @default_url "postgres://postgres:postgres@localhost:5432/lantern_demo"
+  @flicker_api "https://flicker.fly.dev"
+  @poll_interval_ms 500
+  @poll_max_attempts 40
+
+  # ---------------------------------------------------------------------------
+  # Public API
+  # ---------------------------------------------------------------------------
 
   @doc "Returns the demo database URL."
   @spec url() :: String.t()
   def url, do: System.get_env("LANTERN_DEMO_DATABASE_URL", @default_url)
 
   @doc """
-  Creates a sandbox database, seeds it, and returns `{:ok, url, db_name}`.
-  The caller is responsible for eventually calling `drop_sandbox/1`.
-  """
-  @spec create_sandbox() :: {:ok, String.t(), String.t()} | {:error, String.t()}
-  def create_sandbox do
-    id = :crypto.strong_rand_bytes(6) |> Base.url_encode64(padding: false)
-    with {:ok, source} <- Lantern.Source.from(url()) do
-      db_name = "lantern_demo_sandbox_#{String.downcase(id)}"
-      sandbox_source = %{source | database: db_name}
-      sandbox_url = source_to_url(sandbox_source)
+  Creates a writable sandbox. Returns `{:ok, connection_url, sandbox_id}`.
 
-      with :ok <- ensure_database_exists(sandbox_source),
-           {:ok, conn} <- Postgrex.start_link(Lantern.Source.to_postgrex_opts(sandbox_source)) do
-        try do
-          seed!(conn)
-          {:ok, sandbox_url, db_name}
-        rescue
-          exception -> {:error, Exception.message(exception)}
-        after
-          GenServer.stop(conn)
-        end
-      end
+  In prod (Flicker creds present): forks a Flicker branch with a 5-minute TTL.
+  In local dev: creates a raw Postgres database and seeds it.
+
+  The returned `sandbox_id` is opaque — pass it back to `drop_sandbox/1`.
+  """
+  @spec create_sandbox() :: {:ok, String.t(), term()} | {:error, String.t()}
+  def create_sandbox do
+    api_key = Application.get_env(:lantern_demo, :flicker_api_key)
+    db_id = Application.get_env(:lantern_demo, :flicker_database_id)
+
+    if api_key && db_id do
+      create_flicker_branch(api_key, db_id)
+    else
+      create_local_sandbox()
     end
   end
 
-  @doc "Drops a sandbox database created by `create_sandbox/0`."
-  @spec drop_sandbox(String.t()) :: :ok
-  def drop_sandbox(db_name) do
+  @doc "Tears down a sandbox created by `create_sandbox/0`."
+  @spec drop_sandbox(term()) :: :ok
+  def drop_sandbox(sandbox_id) when is_integer(sandbox_id) do
+    api_key = Application.get_env(:lantern_demo, :flicker_api_key)
+    db_id = Application.get_env(:lantern_demo, :flicker_database_id)
+
+    if api_key && db_id do
+      case Req.delete("#{@flicker_api}/api/v1/databases/#{db_id}/branches/#{sandbox_id}",
+             auth: {:bearer, api_key}
+           ) do
+        {:ok, %{status: s}} when s in [200, 204] ->
+          Logger.info("[DemoDB] dropped Flicker branch #{sandbox_id}")
+
+        {:ok, %{status: 404}} ->
+          :ok
+
+        other ->
+          Logger.warning("[DemoDB] unexpected response dropping branch #{sandbox_id}: #{inspect(other)}")
+      end
+    end
+
+    :ok
+  end
+
+  def drop_sandbox(db_name) when is_binary(db_name) do
     with {:ok, source} <- Lantern.Source.from(url()) do
       maintenance_source = %{source | database: "postgres"}
 
@@ -62,7 +93,7 @@ defmodule LanternDemo.DemoDB do
     :ok
   end
 
-  @doc "Creates the demo schema and deterministic sample data."
+  @doc "Creates the demo schema and deterministic sample data (idempotent)."
   @spec ensure() :: :ok | {:error, String.t()}
   def ensure do
     with {:ok, source} <- Lantern.Source.from(url()),
@@ -89,6 +120,91 @@ defmodule LanternDemo.DemoDB do
       {:error, reason} -> raise reason
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Flicker branch sandbox
+  # ---------------------------------------------------------------------------
+
+  defp create_flicker_branch(api_key, db_id) do
+    suffix =
+      :crypto.strong_rand_bytes(4)
+      |> Base.url_encode64(padding: false)
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9]/, "")
+
+    name = "sandbox-#{suffix}"
+
+    case Req.post("#{@flicker_api}/api/v1/databases/#{db_id}/branches",
+           auth: {:bearer, api_key},
+           json: %{name: name, ttl: "5m"}
+         ) do
+      {:ok, %{status: 202, body: %{"branch" => %{"id" => branch_id}}}} ->
+        poll_branch_ready(api_key, db_id, branch_id)
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, "Flicker returned HTTP #{status}: #{inspect(body)}"}
+
+      {:error, exception} ->
+        {:error, "Flicker API error: #{Exception.message(exception)}"}
+    end
+  end
+
+  defp poll_branch_ready(api_key, db_id, branch_id, attempt \\ 0)
+
+  defp poll_branch_ready(_api_key, _db_id, _branch_id, @poll_max_attempts) do
+    {:error, "Timed out waiting for sandbox to become ready"}
+  end
+
+  defp poll_branch_ready(api_key, db_id, branch_id, attempt) do
+    case Req.get("#{@flicker_api}/api/v1/databases/#{db_id}/branches/#{branch_id}",
+           auth: {:bearer, api_key}
+         ) do
+      {:ok, %{status: 200, body: %{"branch" => %{"status" => "ready", "connection_string" => cs}}}}
+      when is_binary(cs) ->
+        {:ok, cs, branch_id}
+
+      {:ok, %{status: 200}} ->
+        Process.sleep(@poll_interval_ms)
+        poll_branch_ready(api_key, db_id, branch_id, attempt + 1)
+
+      {:ok, %{status: status, body: body}} ->
+        {:error, "Unexpected status #{status} polling branch: #{inspect(body)}"}
+
+      {:error, exception} ->
+        Process.sleep(@poll_interval_ms)
+        poll_branch_ready(api_key, db_id, branch_id, attempt + 1)
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Local dev sandbox (raw Postgres)
+  # ---------------------------------------------------------------------------
+
+  defp create_local_sandbox do
+    id = :crypto.strong_rand_bytes(6) |> Base.url_encode64(padding: false)
+
+    with {:ok, source} <- Lantern.Source.from(url()) do
+      db_name = "lantern_demo_sandbox_#{String.downcase(id) |> String.replace(~r/[^a-z0-9]/, "")}"
+      sandbox_source = %{source | database: db_name}
+      sandbox_url = source_to_url(sandbox_source)
+
+      with :ok <- ensure_database_exists(sandbox_source),
+           {:ok, conn} <- Postgrex.start_link(Lantern.Source.to_postgrex_opts(sandbox_source)) do
+        try do
+          seed!(conn)
+          {:ok, sandbox_url, db_name}
+        rescue
+          exception -> {:error, Exception.message(exception)}
+        after
+          GenServer.stop(conn)
+        end
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Seed helpers
+  # ---------------------------------------------------------------------------
 
   defp ensure_database_exists(source) do
     maintenance_source = %{source | database: "postgres"}
@@ -263,13 +379,17 @@ defmodule LanternDemo.DemoDB do
       """
       INSERT INTO ops.release_checks (release_name, passed, notes, checked_at) VALUES
         ('lantern-demo-v1', true, 'Seed data and schema switcher verified', now() - interval '30 minutes'),
-        ('flicker-branch-cleanup', false, 'Waiting for hosted ephemeral branch workflow', now())
+        ('flicker-branch-sandbox', true, 'Ephemeral branches via Flicker API', now())
       """
     ]
   end
 
   defp source_to_url(%Lantern.Source{} = s) do
-    auth = if s.password, do: "#{URI.encode_www_form(s.username)}:#{URI.encode_www_form(s.password)}", else: URI.encode_www_form(s.username)
+    auth =
+      if s.password,
+        do: "#{URI.encode_www_form(s.username)}:#{URI.encode_www_form(s.password)}",
+        else: URI.encode_www_form(s.username)
+
     "postgres://#{auth}@#{s.hostname}:#{s.port}/#{s.database}"
   end
 
