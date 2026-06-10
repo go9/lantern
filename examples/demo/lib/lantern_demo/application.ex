@@ -5,6 +5,8 @@ defmodule LanternDemo.Application do
 
   @impl true
   def start(_type, _args) do
+    LanternDemo.DemoDB.ensure!()
+
     children = [
       {Phoenix.PubSub, name: LanternDemo.PubSub},
       LanternDemo.SandboxManager,

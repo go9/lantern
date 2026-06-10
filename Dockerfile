@@ -22,10 +22,11 @@ COPY mix.exs mix.lock ./
 COPY lib ./lib
 COPY priv ./priv
 
-# Copy the demo app
-COPY examples/demo ./demo
+# Copy the demo app at the same relative path as in the repo so the
+# `path: "../.."` dep in mix.exs resolves to /app (the lantern root).
+COPY examples/demo ./examples/demo
 
-WORKDIR /app/demo
+WORKDIR /app/examples/demo
 
 # Fetch dependencies
 RUN mix deps.get --only prod
@@ -54,7 +55,7 @@ WORKDIR /app
 
 RUN chown nobody /app
 
-COPY --from=builder --chown=nobody:root /app/demo/_build/prod/rel/lantern_demo ./
+COPY --from=builder --chown=nobody:root /app/examples/demo/_build/prod/rel/lantern_demo ./
 
 USER nobody
 

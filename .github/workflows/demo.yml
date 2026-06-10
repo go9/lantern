@@ -1,0 +1,56 @@
+name: Deploy Demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - "priv/**"
+      - "mix.exs"
+      - "mix.lock"
+      - "examples/demo/**"
+      - "Dockerfile"
+      - ".github/workflows/demo.yml"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: go9/lantern-demo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Deploy to Flicker
+        env:
+          FLICKER_TOKEN: ${{ secrets.FLICKER_TOKEN }}
+        run: |
+          APP_ID=$(curl -fsS "https://flickercloud.com/api/v1/apps" \
+            -H "Authorization: Bearer $FLICKER_TOKEN" \
+            | jq -r '.apps[] | select(.slug=="lantern-demo") | .id')
+          curl --fail-with-body -sS -X POST "https://flickercloud.com/api/v1/apps/$APP_ID/deploy" \
+            -H "Authorization: Bearer $FLICKER_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"image\":\"${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}\"}"

@@ -15,7 +15,7 @@ defmodule LanternDemo.DemoDB do
   require Logger
 
   @default_url "postgres://postgres:postgres@localhost:5432/lantern_demo"
-  @flicker_api "https://flicker.fly.dev"
+  @flicker_api "https://flickercloud.com"
   @poll_interval_ms 500
   @poll_max_attempts 40
 
