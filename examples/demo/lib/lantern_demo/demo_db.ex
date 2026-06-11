@@ -195,7 +195,7 @@ defmodule LanternDemo.DemoDB do
       {:ok, %{status: status, body: body}} ->
         {:error, "Unexpected status #{status} polling branch: #{inspect(body)}"}
 
-      {:error, exception} ->
+      {:error, _exception} ->
         Process.sleep(@poll_interval_ms)
         poll_branch_ready(api_key, db_id, branch_id, attempt + 1)
     end
