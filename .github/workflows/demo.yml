@@ -17,7 +17,29 @@ env:
   IMAGE_NAME: go9/lantern-demo
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18"
+          otp-version: "28.0"
+
+      - name: Install demo deps
+        working-directory: examples/demo
+        run: mix deps.get
+
+      - name: Compile (catches errors before Docker build)
+        working-directory: examples/demo
+        run: mix compile --warnings-as-errors
+        env:
+          MIX_ENV: test
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

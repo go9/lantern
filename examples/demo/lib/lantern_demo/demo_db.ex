@@ -23,19 +23,23 @@ defmodule LanternDemo.DemoDB do
   # KeyUsage (keyCertSign/cRLSign) and ExtendedKeyUsage (serverAuth/clientAuth)
   # are considered mismatched per RFC 5280. Some CAs (including certain
   # Let's Encrypt intermediates) produce chains that trigger this. We tolerate
-  # the specific key_usage_mismatch error while keeping all other checks.
-  @ssl_opts [
-    verify: :verify_peer,
-    cacerts: :public_key.cacerts_get(),
-    verify_fun:
-      {fn
-         _cert, {:bad_cert, {:key_usage_mismatch, _}}, state -> {:valid, state}
-         _cert, {:bad_cert, reason}, _state -> {:fail, {:bad_cert, reason}}
-         _cert, {:extension, _}, state -> {:unknown, state}
-         _cert, :valid, state -> {:valid, state}
-         _cert, :valid_peer, state -> {:valid, state}
-       end, []}
-  ]
+  # the specific key_usage_mismatch error while keeping all other checks intact.
+  # Defined as a function (not a module attribute) because anonymous funs can't
+  # be stored as attributes.
+  defp ssl_opts do
+    [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      verify_fun:
+        {fn
+           _cert, {:bad_cert, {:key_usage_mismatch, _}}, state -> {:valid, state}
+           _cert, {:bad_cert, reason}, _state -> {:fail, {:bad_cert, reason}}
+           _cert, {:extension, _}, state -> {:unknown, state}
+           _cert, :valid, state -> {:valid, state}
+           _cert, :valid_peer, state -> {:valid, state}
+         end, []}
+    ]
+  end
 
   # ---------------------------------------------------------------------------
   # Public API
@@ -74,7 +78,7 @@ defmodule LanternDemo.DemoDB do
     if api_key && db_id do
       case Req.delete("#{@flicker_api}/api/v1/databases/#{db_id}/branches/#{sandbox_id}",
              auth: {:bearer, api_key},
-             connect_options: [transport_opts: @ssl_opts]
+             connect_options: [transport_opts: ssl_opts()]
            ) do
         {:ok, %{status: s}} when s in [200, 204] ->
           Logger.info("[DemoDB] dropped Flicker branch #{sandbox_id}")
@@ -156,7 +160,7 @@ defmodule LanternDemo.DemoDB do
     case Req.post("#{@flicker_api}/api/v1/databases/#{db_id}/branches",
            auth: {:bearer, api_key},
            json: %{name: name, ttl: "5m"},
-           connect_options: [transport_opts: @ssl_opts]
+           connect_options: [transport_opts: ssl_opts()]
          ) do
       {:ok, %{status: 202, body: %{"branch" => %{"id" => branch_id}}}} ->
         poll_branch_ready(api_key, db_id, branch_id)
@@ -178,7 +182,7 @@ defmodule LanternDemo.DemoDB do
   defp poll_branch_ready(api_key, db_id, branch_id, attempt) do
     case Req.get("#{@flicker_api}/api/v1/databases/#{db_id}/branches/#{branch_id}",
            auth: {:bearer, api_key},
-           connect_options: [transport_opts: @ssl_opts]
+           connect_options: [transport_opts: ssl_opts()]
          ) do
       {:ok, %{status: 200, body: %{"branch" => %{"status" => "ready", "connection_string" => cs}}}}
       when is_binary(cs) ->
