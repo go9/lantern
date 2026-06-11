@@ -5,6 +5,8 @@ it a database connection and drop the component into any LiveView — you get a
 schema selector, sidebar of tables, a sortable/filterable grid, inline editing,
 row insertion, bulk delete, type-aware inputs, foreign-key lookups, and fullscreen mode.
 
+**[Try the live demo →](https://lantern-demo.flickercloud.com)**
+
 - **Drop-in** — one `live_component`, a stylesheet, and a JS hook. No Fluxon, no
   icon library, no design-system assumptions.
 - **Connection-agnostic** — point it at any Postgres via a `postgres://` URL, a
@@ -251,10 +253,11 @@ DDL) **and** refuses the matching events server-side, and restricts the SQL
 workspace to `SELECT`/`EXPLAIN`. Browsing, filtering, sorting, foreign-key
 navigation, charts, and exports stay available.
 
-## Local demo
+## Demo
 
-Lantern ships with a local-only Phoenix demo app backed by a disposable Postgres
-fixture database:
+A live demo is running at **[lantern-demo.flickercloud.com](https://lantern-demo.flickercloud.com)** — the shared database is read-only; request a sandbox to get a full read/write Postgres branch of your own.
+
+To run the demo locally:
 
 ```bash
 cd examples/demo
