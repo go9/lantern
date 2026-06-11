@@ -1,6 +1,8 @@
-ARG ELIXIR_VERSION=1.18.4
-ARG OTP_VERSION=28.0
-ARG DEBIAN_VERSION=bookworm-20250317-slim
+# Pinned to a published hexpm/elixir tag (the 1.18.4/28.0/20250317 combo was
+# never published to Docker Hub, so this image could never build).
+ARG ELIXIR_VERSION=1.18.2
+ARG OTP_VERSION=27.2
+ARG DEBIAN_VERSION=bookworm-20250113-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
