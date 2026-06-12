@@ -9,7 +9,7 @@ ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
 
 FROM ${BUILDER_IMAGE} AS builder
 
-RUN apt-get update -y && apt-get install -y build-essential git \
+RUN apt-get update -y && apt-get install -y build-essential git wget \
   && apt-get clean && rm -f /var/lib/apt/lists/*_*
 
 WORKDIR /app
@@ -18,8 +18,8 @@ RUN mix local.hex --force 2>/dev/null || mix archive.install github hexpm/hex br
 
 # Download rebar3 from GitHub (curl → OpenSSL, not OTP ssl — avoids key_usage_mismatch).
 # MIX_REBAR3 tells Mix to use this binary directly and never call builds.hex.pm for rebar.
-RUN curl -fsSL https://github.com/erlang/rebar3/releases/download/3.24.0/rebar3 \
-      -o /usr/local/bin/rebar3 && chmod +x /usr/local/bin/rebar3
+RUN wget -q https://github.com/erlang/rebar3/releases/download/3.24.0/rebar3 \
+      -O /usr/local/bin/rebar3 && chmod +x /usr/local/bin/rebar3
 ENV MIX_REBAR3=/usr/local/bin/rebar3
 
 # Set build-time env
