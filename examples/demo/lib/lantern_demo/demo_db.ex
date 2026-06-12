@@ -17,7 +17,7 @@ defmodule LanternDemo.DemoDB do
   @default_url "postgres://postgres:postgres@localhost:5432/lantern_demo"
   @flicker_api "https://flickercloud.com"
   @poll_interval_ms 500
-  @poll_max_attempts 40
+  @poll_max_attempts 180
 
   # OTP 26+ added stricter PKIX path validation that rejects CA certs whose
   # KeyUsage (keyCertSign/cRLSign) and ExtendedKeyUsage (serverAuth/clientAuth)
