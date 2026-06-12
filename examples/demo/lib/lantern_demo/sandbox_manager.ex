@@ -12,6 +12,7 @@ defmodule LanternDemo.SandboxManager do
   require Logger
 
   @ttl_seconds 300
+  @max_concurrent 10
 
   # ---------------------------------------------------------------------------
   # Public API
@@ -46,6 +47,10 @@ defmodule LanternDemo.SandboxManager do
   end
 
   @impl true
+  def handle_call({:start, _caller_pid}, _from, state) when map_size(state) >= @max_concurrent do
+    {:reply, {:error, "Demo is at capacity — try again in a few minutes."}, state}
+  end
+
   def handle_call({:start, caller_pid}, _from, state) do
     case LanternDemo.DemoDB.create_sandbox() do
       {:ok, url, sandbox_id} ->
