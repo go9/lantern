@@ -14,7 +14,8 @@ RUN apt-get update -y && apt-get install -y build-essential git \
 
 WORKDIR /app
 
-RUN mix local.hex --force 2>/dev/null || true && mix local.rebar --force 2>/dev/null || true
+RUN mix local.hex --force 2>/dev/null || mix archive.install github hexpm/hex branch latest --force
+RUN mix local.rebar --force 2>/dev/null || true
 
 # Set build-time env
 ENV MIX_ENV="prod"
