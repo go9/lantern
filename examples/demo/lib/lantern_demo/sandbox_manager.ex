@@ -27,7 +27,7 @@ defmodule LanternDemo.SandboxManager do
   """
   @spec start(pid()) :: {:ok, %{url: String.t(), ref: reference(), ttl: pos_integer()}} | {:error, String.t()}
   def start(caller_pid) do
-    GenServer.call(__MODULE__, {:start, caller_pid}, 20_000)
+    GenServer.call(__MODULE__, {:start, caller_pid}, 60_000)
   end
 
   @doc "Releases a sandbox immediately (LiveView disconnect or user reset)."

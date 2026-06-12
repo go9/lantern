@@ -60,7 +60,20 @@ defmodule LanternDemoWeb.DemoLive do
   def handle_event("sandbox_token", %{"token" => token}, socket) do
     case LanternDemo.Captcha.verify(token) do
       :ok ->
-        {:noreply, socket |> assign(sandbox: :creating) |> create_sandbox()}
+        lv = self()
+
+        Task.start(fn ->
+          result =
+            try do
+              LanternDemo.SandboxManager.start(lv)
+            catch
+              :exit, _ -> {:error, "Sandbox creation timed out — please try again."}
+            end
+
+          send(lv, {:sandbox_result, result})
+        end)
+
+        {:noreply, assign(socket, sandbox: :creating)}
 
       {:error, reason} ->
         {:noreply, assign(socket, sandbox: {:error, reason})}
@@ -77,8 +90,18 @@ defmodule LanternDemoWeb.DemoLive do
   end
 
   # ---------------------------------------------------------------------------
-  # Info — countdown tick
+  # Info — sandbox creation result + countdown tick
   # ---------------------------------------------------------------------------
+
+  @impl true
+  def handle_info({:sandbox_result, {:ok, %{url: url, ref: ref, ttl: ttl}}}, socket) do
+    schedule_tick()
+    {:noreply, assign(socket, sandbox: {:active, url, ref, ttl})}
+  end
+
+  def handle_info({:sandbox_result, {:error, reason}}, socket) do
+    {:noreply, assign(socket, sandbox: {:error, reason})}
+  end
 
   @impl true
   def handle_info(:sandbox_tick, socket) do
@@ -104,17 +127,6 @@ defmodule LanternDemoWeb.DemoLive do
     case LanternDemo.DemoDB.ensure() do
       :ok -> assign(socket, ready?: true, error: nil)
       {:error, reason} -> assign(socket, ready?: false, error: reason)
-    end
-  end
-
-  defp create_sandbox(socket) do
-    case LanternDemo.SandboxManager.start(self()) do
-      {:ok, %{url: url, ref: ref, ttl: ttl}} ->
-        schedule_tick()
-        assign(socket, sandbox: {:active, url, ref, ttl})
-
-      {:error, reason} ->
-        assign(socket, sandbox: {:error, reason})
     end
   end
 
