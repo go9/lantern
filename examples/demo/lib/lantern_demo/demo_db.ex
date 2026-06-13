@@ -173,28 +173,6 @@ defmodule LanternDemo.DemoDB do
     end
   end
 
-  # A Flicker branch is a CNPG VolumeSnapshot clone of its parent (the demo's
-  # `main` branch), so it inherits `main`'s Postgres roles AND their password
-  # hashes verbatim. The branch row's own `password` column is left empty,
-  # though, so the `connection_string` Flicker hands back authenticates as
-  # `postgres` with an *empty* password — which Postgres rejects (28P01).
-  #
-  # We already hold credentials that authenticate against `main` (the demo's
-  # LANTERN_DEMO_DATABASE_URL); since the fork shares those roles, graft that
-  # URL's userinfo onto the branch connection string while keeping the branch's
-  # own host, database, and `options=endpoint=...` SNI parameter.
-  defp graft_credentials(branch_cs) do
-    branch_uri = URI.parse(branch_cs)
-
-    case URI.parse(url()) do
-      %URI{userinfo: userinfo} when is_binary(userinfo) and userinfo != "" ->
-        URI.to_string(%{branch_uri | userinfo: userinfo})
-
-      _ ->
-        branch_cs
-    end
-  end
-
   defp poll_branch_ready(api_key, db_id, branch_id, attempt \\ 0)
 
   defp poll_branch_ready(_api_key, _db_id, _branch_id, @poll_max_attempts) do
@@ -208,7 +186,7 @@ defmodule LanternDemo.DemoDB do
          ) do
       {:ok, %{status: 200, body: %{"branch" => %{"status" => "ready", "connection_string" => cs}}}}
       when is_binary(cs) ->
-        {:ok, graft_credentials(cs), branch_id}
+        {:ok, cs, branch_id}
 
       {:ok, %{status: 200}} ->
         Process.sleep(@poll_interval_ms)
