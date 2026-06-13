@@ -105,7 +105,7 @@ defmodule Lantern.Source do
       username: source.username,
       password: source.password,
       database: source.database,
-      ssl: source.ssl,
+      ssl: ssl_opts(source),
       pool_size: 1,
       connect_timeout: 10_000,
       timeout: 30_000
@@ -120,6 +120,41 @@ defmodule Lantern.Source do
   # ---------------------------------------------------------------------------
   # Private
   # ---------------------------------------------------------------------------
+
+  # When SSL is disabled, pass `false` (Postgrex skips TLS entirely).
+  #
+  # When enabled, build a verifying TLS config rather than a bare `ssl: true`.
+  # Two hosting realities force the extra options:
+  #
+  #   * **OTP 26/27 PKIX strictness** rejects some real-world chains (e.g.
+  #     intermediates whose KeyUsage/ExtendedKeyUsage are flagged as a
+  #     `key_usage_mismatch` per RFC 5280) at the TLS layer — surfacing as a
+  #     "Unsupported Certificate" alert before Postgres auth even begins. We
+  #     tolerate that one specific bad_cert reason while keeping every other
+  #     check intact.
+  #   * **Wildcard certs** (e.g. `*.db.host.com` fronting per-branch endpoints)
+  #     only match correctly under the HTTPS hostname rules, so we install the
+  #     `:https` match_fun explicitly.
+  defp ssl_opts(%__MODULE__{ssl: false}), do: false
+
+  defp ssl_opts(%__MODULE__{ssl: true} = source) do
+    [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      server_name_indication: String.to_charlist(source.hostname),
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ],
+      verify_fun:
+        {fn
+           _cert, {:bad_cert, {:key_usage_mismatch, _}}, state -> {:valid, state}
+           _cert, {:bad_cert, reason}, _state -> {:fail, {:bad_cert, reason}}
+           _cert, {:extension, _}, state -> {:unknown, state}
+           _cert, :valid, state -> {:valid, state}
+           _cert, :valid_peer, state -> {:valid, state}
+         end, []}
+    ]
+  end
 
   defp validate(%__MODULE__{} = source) do
     cond do

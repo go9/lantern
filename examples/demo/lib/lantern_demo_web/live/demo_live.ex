@@ -233,7 +233,7 @@ defmodule LanternDemoWeb.DemoLive do
         </div>
         <div class="demo-sandbox-pitch">
           <p class="demo-sandbox-pitch-text">
-            <strong>A real Postgres database was just provisioned for you in under 2 seconds.</strong>
+            <strong>A real Postgres database was just forked and provisioned for you.</strong>
             It's isolated, writable, and self-destructs when you're done. This is what
             <strong>Flicker</strong> does for every branch of every app you deploy — instant
             preview databases on every pull request, no ops required.
