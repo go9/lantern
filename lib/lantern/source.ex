@@ -20,7 +20,8 @@ defmodule Lantern.Source do
             username: nil,
             password: nil,
             database: nil,
-            ssl: false
+            ssl: false,
+            parameters: []
 
   @type t :: %__MODULE__{
           hostname: String.t(),
@@ -28,7 +29,8 @@ defmodule Lantern.Source do
           username: String.t(),
           password: String.t() | nil,
           database: String.t(),
-          ssl: boolean()
+          ssl: boolean(),
+          parameters: [{String.t(), String.t()}]
         }
 
   @default_port 5432
@@ -82,7 +84,8 @@ defmodule Lantern.Source do
           username: username,
           password: password,
           database: parse_database(uri.path),
-          ssl: parse_ssl(uri.query)
+          ssl: parse_ssl(uri.query),
+          parameters: parse_parameters(uri.query)
         }
 
         validate(source)
@@ -96,7 +99,7 @@ defmodule Lantern.Source do
   """
   @spec to_postgrex_opts(t()) :: keyword()
   def to_postgrex_opts(%__MODULE__{} = source) do
-    [
+    base = [
       hostname: source.hostname,
       port: source.port,
       username: source.username,
@@ -107,6 +110,11 @@ defmodule Lantern.Source do
       connect_timeout: 10_000,
       timeout: 30_000
     ]
+
+    case source.parameters do
+      [] -> base
+      params -> Keyword.put(base, :parameters, params)
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -162,6 +170,18 @@ defmodule Lantern.Source do
     case URI.decode_query(query) do
       %{"sslmode" => mode} when mode in ["require", "verify-ca", "verify-full", "prefer"] -> true
       _ -> false
+    end
+  end
+
+  # Neon (and Flicker branch) connection strings carry `options=endpoint%3D<id>`
+  # as a startup parameter for SNI-based routing. Postgrex forwards the
+  # `parameters` list verbatim to Postgres as startup message parameters.
+  defp parse_parameters(nil), do: []
+
+  defp parse_parameters(query) do
+    case URI.decode_query(query) do
+      %{"options" => options} -> [{"options", options}]
+      _ -> []
     end
   end
 
