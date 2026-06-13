@@ -1,8 +1,11 @@
 # Pinned to a published hexpm/elixir tag (the 1.18.4/28.0/20250317 combo was
 # never published to Docker Hub, so this image could never build).
-ARG ELIXIR_VERSION=1.18.2
-ARG OTP_VERSION=27.2
-ARG DEBIAN_VERSION=bookworm-20250113-slim
+# OTP 27.2 has a TLS cert-path-validation regression (key_usage_mismatch) that
+# breaks `mix local.hex` against builds.hex.pm after hex.pm's 2026-06 cert
+# rotation. Pin OTP 28 (proven good) to keep image builds working.
+ARG ELIXIR_VERSION=1.18.4
+ARG OTP_VERSION=28.5.0.2
+ARG DEBIAN_VERSION=bookworm-20260610-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
