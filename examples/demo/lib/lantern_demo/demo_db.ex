@@ -3,10 +3,12 @@ defmodule LanternDemo.DemoDB do
   Demo database management — seed data for the read-only view, and sandbox
   creation/teardown for writable sessions.
 
-  **Sandbox strategy (prod):** Flicker branch API. Each sandbox is a fork of the
-  demo database's default branch — it inherits all seed data instantly, is
-  writable, and self-destructs via `ttl: "5m"` even if the app crashes. Set
-  `FLICKER_API_KEY` and `FLICKER_DATABASE_ID` to enable.
+  **Sandbox strategy (prod):** Flicker branch API. Each sandbox is a fresh
+  Flicker branch with a 5-minute TTL that self-destructs even if the app
+  crashes. Once the branch is ready we seed it directly over its own connection
+  string (idempotent), so the sandbox is correct regardless of whether the
+  branched database's default branch happens to be seeded. Set `FLICKER_API_KEY`
+  and `FLICKER_DATABASE_ID` to enable.
 
   **Sandbox strategy (local dev):** raw `CREATE DATABASE` + seed + `DROP DATABASE`
   when Flicker credentials are absent.
@@ -163,7 +165,21 @@ defmodule LanternDemo.DemoDB do
            connect_options: [transport_opts: ssl_opts()]
          ) do
       {:ok, %{status: 202, body: %{"branch" => %{"id" => branch_id}}}} ->
-        poll_branch_ready(api_key, db_id, branch_id)
+        # A Flicker branch is a copy-on-write clone of its parent's volume, but
+        # the parent (the branched database's default branch) is not guaranteed
+        # to carry the demo seed data — the env overhaul decoupled the seeded
+        # display DB (LANTERN_DEMO_DATABASE_URL) from FLICKER_DATABASE_ID. So we
+        # seed the branch ourselves over its own connection string once it's
+        # ready. seed!/1 is idempotent, and a failure here means the sandbox is
+        # unusable, so we tear the half-baked branch down and surface the error.
+        with {:ok, cs, _branch_id} <- poll_branch_ready(api_key, db_id, branch_id),
+             :ok <- seed_branch(cs) do
+          {:ok, cs, branch_id}
+        else
+          {:error, reason} ->
+            drop_sandbox(branch_id)
+            {:error, reason}
+        end
 
       {:ok, %{status: status, body: body}} ->
         {:error, "Flicker returned HTTP #{status}: #{inspect(body)}"}
@@ -198,6 +214,27 @@ defmodule LanternDemo.DemoDB do
       {:error, _exception} ->
         Process.sleep(@poll_interval_ms)
         poll_branch_ready(api_key, db_id, branch_id, attempt + 1)
+    end
+  end
+
+  # Seeds a freshly-created Flicker branch over its own connection string. Uses
+  # the same Source -> Postgrex path Lantern.Explorer uses (sslmode + the
+  # `options` SNI startup param are handled by Lantern.Source), so success here
+  # also proves the branch accepts writes and DDL.
+  defp seed_branch(connection_string) do
+    with {:ok, source} <- Lantern.Source.from(connection_string),
+         {:ok, conn} <- Postgrex.start_link(Lantern.Source.to_postgrex_opts(source)) do
+      try do
+        seed!(conn)
+        :ok
+      rescue
+        exception -> {:error, "Failed to seed sandbox: #{Exception.message(exception)}"}
+      after
+        GenServer.stop(conn)
+      end
+    else
+      {:error, reason} when is_binary(reason) -> {:error, reason}
+      {:error, reason} -> {:error, "Could not connect to sandbox: #{inspect(reason)}"}
     end
   end
 

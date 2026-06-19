@@ -6,6 +6,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Demo sandboxes came up empty and broke on DDL.** A Flicker branch is a
+  copy-on-write clone of its parent, so a sandbox only inherited seed data when
+  the branched database's default branch was itself seeded. The env overhaul
+  decoupled the seeded display DB (`LANTERN_DEMO_DATABASE_URL`) from
+  `FLICKER_DATABASE_ID`, leaving every sandbox empty (and "create table"
+  failing for want of a schema). The demo now seeds each branch directly over
+  its own connection string once it's ready — idempotent, env-independent, and
+  doubling as a write/DDL check that fails loudly instead of handing back a
+  broken sandbox.
+
 ## [0.7.0] - 2026-06-09
 
 ### Changed
