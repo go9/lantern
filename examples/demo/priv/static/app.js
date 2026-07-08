@@ -2,6 +2,7 @@ import { Socket } from "https://cdn.jsdelivr.net/npm/phoenix@1.8.7/+esm"
 import { LiveSocket } from "/js/phoenix_live_view.esm.js"
 import { LanternGrid } from "/lantern/hooks.js"
 import { LiveCode } from "/livecode/livecode.js"
+import LanternUIHooks from "/lantern_ui_hooks.js"
 
 const TurnstileWidget = {
   mounted() {
@@ -27,7 +28,7 @@ const TurnstileWidget = {
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 const liveSocket = new LiveSocket("/live", Socket, {
-  hooks: { LanternGrid, LiveCode, TurnstileWidget },
+  hooks: { ...LanternUIHooks, LanternGrid, LiveCode, TurnstileWidget },
   params: { _csrf_token: csrfToken },
 })
 
