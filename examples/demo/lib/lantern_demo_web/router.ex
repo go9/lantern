@@ -18,5 +18,6 @@ defmodule LanternDemoWeb.Router do
 
     live("/", DemoLive, :index)
     live("/components", ComponentsLive, :index)
+    live("/components/:slug", ComponentsLive, :show)
   end
 end
