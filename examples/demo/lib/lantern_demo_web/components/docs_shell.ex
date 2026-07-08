@@ -19,7 +19,12 @@ defmodule LanternDemoWeb.DocsShell do
        {"input", "Input"},
        {"datetime-field", "Datetime field"},
        {"calendar", "Calendar"},
-       {"date-picker", "Date & time pickers"}
+       {"date-picker", "Date & time pickers"},
+       {"checkbox", "Checkbox"},
+       {"modal", "Modal"},
+       {"dropdown", "Dropdown menu"},
+       {"breadcrumb", "Breadcrumb"},
+       {"empty-state", "Empty state"}
      ]},
     {"Charts",
      [
