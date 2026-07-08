@@ -112,7 +112,9 @@ defmodule LanternDemoWeb.DemoLive do
 
       {:active, _url, ref, _} ->
         LanternDemo.SandboxManager.stop(ref)
-        {:noreply, assign(socket, sandbox: :expired, reset_nonce: System.unique_integer([:positive]))}
+
+        {:noreply,
+         assign(socket, sandbox: :expired, reset_nonce: System.unique_integer([:positive]))}
 
       _ ->
         {:noreply, socket}
@@ -164,7 +166,8 @@ defmodule LanternDemoWeb.DemoLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <main class="demo-shell" data-demo-theme={@theme}>
+    <LanternDemoWeb.DocsShell.shell current="db" theme={@theme}>
+      <div class="demo-shell" data-demo-theme={@theme}>
       <section class="demo-hero">
         <p class="demo-eyebrow">Lantern</p>
         <h1 class="demo-title">Drop a Postgres table editor into any LiveView.</h1>
@@ -317,7 +320,8 @@ defmodule LanternDemoWeb.DemoLive do
         read_only={not match?({:active, _, _, _}, @sandbox)}
         style={lantern_style(@height, @accent, @theme)}
       />
-    </main>
+      </div>
+    </LanternDemoWeb.DocsShell.shell>
     """
   end
 end
