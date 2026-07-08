@@ -13,8 +13,13 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Calendar
   alias LanternUI.Components.DatePicker
   alias LanternUI.Components.DatetimeField
+  alias LanternUI.Components.Breadcrumb
+  alias LanternUI.Components.Checkbox
+  alias LanternUI.Components.Dropdown
+  alias LanternUI.Components.EmptyState
   alias LanternUI.Components.Form
   alias LanternUI.Components.Icon
+  alias LanternUI.Components.Modal
 
   @groups LanternDemoWeb.DocsShell.component_groups()
 
@@ -63,6 +68,44 @@ defmodule LanternDemoWeb.ComponentsLive do
     """,
     "sparkline" => ~S"""
     <.sparkline id="s" series={[3, 5, 4, 8, 6, 9]} height={48} />
+    """,
+    "checkbox" => ~S"""
+    <.checkbox field={@form[:accept]} label="Accept the terms" />
+    <.checkbox name="notify" checked label="Email me" description="At most one per day." />
+    """,
+    "modal" => ~S"""
+    <.button phx-click={LanternUI.open_dialog("confirm")}>Delete…</.button>
+
+    <.modal id="confirm">
+      <h2>Delete 3 objects?</h2>
+      <p>This cannot be undone.</p>
+      <.button phx-click={LanternUI.close_dialog("confirm")}>Cancel</.button>
+      <.button variant="solid" color="danger" phx-click="delete">Delete</.button>
+    </.modal>
+    """,
+    "dropdown" => ~S"""
+    <.dropdown id="row-actions" placement="bottom-end">
+      <:toggle>
+        <.button size="icon" aria-label="Actions"><.icon name="ellipsis-horizontal" /></.button>
+      </:toggle>
+      <.dropdown_header>object.png</.dropdown_header>
+      <.dropdown_button phx-click="download">Download</.dropdown_button>
+      <.dropdown_separator />
+      <.dropdown_button phx-click="delete" data-danger>Delete</.dropdown_button>
+    </.dropdown>
+    """,
+    "breadcrumb" => ~S"""
+    <.breadcrumb>
+      <:item phx-click="close_bucket">my-bucket</:item>
+      <:item phx-click="navigate" phx-value-prefix="photos/">photos</:item>
+      <:item current>2026</:item>
+    </.breadcrumb>
+    """,
+    "empty-state" => ~S"""
+    <.empty_state icon="folder-open" title="No objects">
+      Drop files here to upload them.
+      <:action><.button size="sm">Upload</.button></:action>
+    </.empty_state>
     """
   }
 
@@ -303,6 +346,126 @@ defmodule LanternDemoWeb.ComponentsLive do
             </div>
           </div>
           <pre class="docs-code"><code>{@snippets["date-picker"]}</code></pre>
+        </article>
+
+
+        <article :if={@current == "checkbox"} class="docs-body">
+          <h1>Checkbox</h1>
+          <p>
+            Fluxon-compatible, <code>FormField</code>-aware. A hidden input submits the
+            unchecked value so forms always receive the param.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-row" style="flex-direction: column; align-items: flex-start; gap: .75rem;">
+              <Checkbox.checkbox id="ck-1" name="accept" label="Accept the terms" />
+              <Checkbox.checkbox
+                id="ck-2"
+                name="notify"
+                checked
+                label="Email me about activity"
+                description="At most one email per day."
+              />
+              <Checkbox.checkbox id="ck-3" name="dis" label="Disabled" disabled />
+              <Checkbox.checkbox id="ck-4" name="err" label="Required" errors={["must be accepted"]} />
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["checkbox"]}</code></pre>
+        </article>
+
+        <article :if={@current == "modal"} class="docs-body">
+          <h1>Modal</h1>
+          <p>
+            Dialog on the shared overlay runtime: focus trap, <kbd>Esc</kbd>/outside dismissal,
+            token-driven fade. Open from the client with <code>LanternUI.open_dialog/1</code> or
+            the server with <code>LanternUI.open_dialog(socket, id)</code>.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-row">
+              <Button.button phx-click={LanternUI.open_dialog("demo-modal")}>Open modal</Button.button>
+            </div>
+            <Modal.modal id="demo-modal">
+              <h2 style="margin: 0 0 .4rem; font-size: 1.05rem;">Delete 3 objects?</h2>
+              <p style="margin: 0 0 1rem; color: var(--lantern-fg-muted); font-size: .85rem;">
+                This action cannot be undone.
+              </p>
+              <div style="display: flex; gap: .5rem; justify-content: flex-end;">
+                <Button.button phx-click={LanternUI.close_dialog("demo-modal")}>Cancel</Button.button>
+                <Button.button
+                  variant="solid"
+                  color="danger"
+                  phx-click={LanternUI.close_dialog("demo-modal")}
+                >
+                  Delete
+                </Button.button>
+              </div>
+            </Modal.modal>
+          </div>
+          <pre class="docs-code"><code>{@snippets["modal"]}</code></pre>
+        </article>
+
+        <article :if={@current == "dropdown"} class="docs-body">
+          <h1>Dropdown menu</h1>
+          <p>
+            Fluxon-compatible family with WAI-ARIA menu semantics — <kbd>↑</kbd><kbd>↓</kbd>
+            move through items, <kbd>Esc</kbd> closes, focus returns to the trigger.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-row">
+              <Dropdown.dropdown id="dd-demo" label="Actions">
+                <Dropdown.dropdown_header>object.png</Dropdown.dropdown_header>
+                <Dropdown.dropdown_button>
+                  <Icon.icon name="arrow-down-tray" /> Download
+                </Dropdown.dropdown_button>
+                <Dropdown.dropdown_button>
+                  <Icon.icon name="arrow-path" /> Rename
+                </Dropdown.dropdown_button>
+                <Dropdown.dropdown_separator />
+                <Dropdown.dropdown_button data-danger>
+                  <Icon.icon name="trash" /> Delete
+                </Dropdown.dropdown_button>
+              </Dropdown.dropdown>
+              <Dropdown.dropdown id="dd-icon" placement="bottom-end">
+                <:toggle>
+                  <Button.button size="icon" aria-label="More">
+                    <Icon.icon name="ellipsis-horizontal" />
+                  </Button.button>
+                </:toggle>
+                <Dropdown.dropdown_button>Duplicate</Dropdown.dropdown_button>
+                <Dropdown.dropdown_button>Move…</Dropdown.dropdown_button>
+              </Dropdown.dropdown>
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["dropdown"]}</code></pre>
+        </article>
+
+        <article :if={@current == "breadcrumb"} class="docs-body">
+          <h1>Breadcrumb</h1>
+          <p>
+            Path navigation for file/tree UIs — a lantern-ui extension. Items render as links,
+            event buttons, or the <code>aria-current</code> page.
+          </p>
+          <div class="docs-demo">
+            <Breadcrumb.breadcrumb>
+              <:item href="#">my-bucket</:item>
+              <:item href="#">photos</:item>
+              <:item href="#">2026</:item>
+              <:item current>07-vacation</:item>
+            </Breadcrumb.breadcrumb>
+          </div>
+          <pre class="docs-code"><code>{@snippets["breadcrumb"]}</code></pre>
+        </article>
+
+        <article :if={@current == "empty-state"} class="docs-body">
+          <h1>Empty state</h1>
+          <p>Quiet zero states for tables, lists, and panels — a lantern-ui extension.</p>
+          <div class="docs-demo">
+            <EmptyState.empty_state icon="folder-open" title="No objects">
+              Drop files here to upload them, or create a folder to get organized.
+              <:action><Button.button size="sm">Upload</Button.button></:action>
+              <:action><Button.button size="sm" variant="ghost">New folder</Button.button></:action>
+            </EmptyState.empty_state>
+          </div>
+          <pre class="docs-code"><code>{@snippets["empty-state"]}</code></pre>
         </article>
 
         <article :if={@current == "area-chart"} class="docs-body">
