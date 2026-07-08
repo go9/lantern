@@ -17,5 +17,6 @@ defmodule LanternDemoWeb.Router do
     pipe_through(:browser)
 
     live("/", DemoLive, :index)
+    live("/components", ComponentsLive, :index)
   end
 end
