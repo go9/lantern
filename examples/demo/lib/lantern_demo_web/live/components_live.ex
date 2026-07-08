@@ -16,24 +16,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Form
   alias LanternUI.Components.Icon
 
-  @groups [
-    {"Components",
-     [
-       {"button", "Button"},
-       {"icon", "Icon"},
-       {"input", "Input"},
-       {"datetime-field", "Datetime field"},
-       {"calendar", "Calendar"},
-       {"date-picker", "Date & time pickers"}
-     ]},
-    {"Charts",
-     [
-       {"area-chart", "Area chart"},
-       {"line-chart", "Line chart"},
-       {"bar-chart", "Bar chart"},
-       {"sparkline", "Sparkline"}
-     ]}
-  ]
+  @groups LanternDemoWeb.DocsShell.component_groups()
 
   @labels Map.new(Enum.flat_map(@groups, fn {_g, items} -> items end))
   @default_slug "button"
@@ -159,41 +142,7 @@ defmodule LanternDemoWeb.ComponentsLive do
 
   def render(assigns) do
     ~H"""
-    <div
-      class={["docs", @theme == "dark" && "dark"]}
-      data-lantern-density={@density}
-    >
-      <aside class="docs-side">
-        <div class="docs-brand">
-          <a href="/" class="docs-back">← lantern demo</a>
-          <span class="docs-logo">lantern-ui</span>
-          <span class="docs-ver">
-            <a href="https://hex.pm/packages/lantern_ui">hex.pm</a>
-            · <a href="https://lantern-ui.hexdocs.pm">docs</a>
-            · <a href="https://github.com/go9/lantern-ui">github</a>
-          </span>
-        </div>
-
-        <nav class="docs-nav">
-          <div :for={{group, items} <- @groups} class="docs-group">
-            <div class="docs-group-label">{group}</div>
-            <.link
-              :for={{slug, label} <- items}
-              patch={"/components/#{slug}"}
-              class={["docs-item", @current == slug && "active"]}
-            >
-              {label}
-            </.link>
-          </div>
-          <div class="docs-group">
-            <div class="docs-group-label">Ecosystem</div>
-            <a class="docs-item" href="/">DB viewer</a>
-            <span class="docs-item docs-soon">S3 viewer — soon</span>
-          </div>
-        </nav>
-      </aside>
-
-      <main class="docs-main">
+    <LanternDemoWeb.DocsShell.shell current={@current} theme={@theme} density={@density}>
         <div class="docs-topbar">
           <div class="docs-crumb">Components <span>/</span> {@label}</div>
           <div class="docs-toggles">
@@ -396,41 +345,7 @@ defmodule LanternDemoWeb.ComponentsLive do
           </div>
           <pre class="docs-code"><code>{@snippets["sparkline"]}</code></pre>
         </article>
-      </main>
-
       <style>
-        .docs { display: flex; min-height: 100vh; font-family: var(--lantern-font);
-          background: var(--lantern-surface); color: var(--lantern-fg);
-          transition: background .15s, color .15s; }
-
-        /* ── Sidebar ── */
-        .docs-side { width: 230px; flex-shrink: 0; position: sticky; top: 0; height: 100vh;
-          overflow-y: auto; border-right: 1px solid var(--lantern-border);
-          padding: 1.25rem 1rem 2rem; box-sizing: border-box;
-          background: var(--lantern-surface); }
-        .docs-brand { padding: 0 .5rem; margin-bottom: 1.25rem; display: flex;
-          flex-direction: column; gap: .2rem; }
-        .docs-back { font-size: .75rem; color: var(--lantern-fg-subtle); text-decoration: none; }
-        .docs-back:hover { color: var(--lantern-accent); }
-        .docs-logo { font-size: 1rem; font-weight: 700; letter-spacing: -.02em; }
-        .docs-ver { font-size: .6875rem; color: var(--lantern-fg-subtle); }
-        .docs-ver a { color: var(--lantern-fg-muted); text-decoration: none; }
-        .docs-ver a:hover { color: var(--lantern-accent); }
-        .docs-group { margin-bottom: 1.25rem; }
-        .docs-group-label { font-size: .6875rem; font-weight: 600; text-transform: uppercase;
-          letter-spacing: .05em; color: var(--lantern-fg-subtle); padding: 0 .5rem;
-          margin-bottom: .25rem; }
-        .docs-item { display: block; font-size: .8125rem; color: var(--lantern-fg-muted);
-          text-decoration: none; padding: .3rem .5rem; border-radius: var(--lantern-radius-sm);
-          line-height: 1.4; }
-        .docs-item:hover { color: var(--lantern-fg); background: var(--lantern-surface-sunken); }
-        .docs-item.active { color: var(--lantern-accent); font-weight: 550;
-          background: var(--lantern-accent-soft); }
-        .docs-soon { color: var(--lantern-fg-subtle); cursor: default; }
-        .docs-soon:hover { color: var(--lantern-fg-subtle); background: none; }
-
-        /* ── Content ── */
-        .docs-main { flex: 1; min-width: 0; padding: 1.25rem 2.5rem 5rem; box-sizing: border-box; }
         .docs-topbar { display: flex; justify-content: space-between; align-items: center;
           gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--lantern-border);
           margin-bottom: 2rem; }
@@ -460,18 +375,8 @@ defmodule LanternDemoWeb.ComponentsLive do
           overflow-x: auto; }
         .docs-code code { font-family: var(--lantern-font-mono); font-size: .75rem; line-height: 1.6;
           color: var(--lantern-fg); }
-
-        /* ── Mobile: sidebar becomes a top strip ── */
-        @media (max-width: 760px) {
-          .docs { flex-direction: column; }
-          .docs-side { position: static; width: 100%; height: auto; border-right: none;
-            border-bottom: 1px solid var(--lantern-border); padding-bottom: .75rem; }
-          .docs-nav { display: flex; gap: 1.25rem; overflow-x: auto; }
-          .docs-group { margin-bottom: 0; flex-shrink: 0; }
-          .docs-main { padding: 1.25rem 1.25rem 4rem; }
-        }
       </style>
-    </div>
+    </LanternDemoWeb.DocsShell.shell>
     """
   end
 end
