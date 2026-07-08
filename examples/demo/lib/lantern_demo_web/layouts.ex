@@ -15,6 +15,7 @@ defmodule LanternDemoWeb.Layouts do
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+        <link rel="stylesheet" href="/lantern_ui.css" />
         <link rel="stylesheet" href="/lantern/lantern.css" />
         <link rel="stylesheet" href="/livecode/livecode.css" />
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer>

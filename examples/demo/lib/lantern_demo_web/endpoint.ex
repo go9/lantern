@@ -35,6 +35,13 @@ defmodule LanternDemoWeb.Endpoint do
   )
 
   plug(Plug.Static,
+    at: "/",
+    from: {:lantern_ui, "priv/static"},
+    gzip: false,
+    only: ~w(lantern_ui.css lantern_ui_hooks.js)
+  )
+
+  plug(Plug.Static,
     at: "/js",
     from: {:phoenix_live_view, "priv/static"},
     gzip: false,

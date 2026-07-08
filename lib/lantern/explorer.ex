@@ -59,6 +59,7 @@ defmodule Lantern.Explorer do
   use Phoenix.LiveComponent
 
   alias Lantern.Coercion
+  alias LanternUI.Components.DatePicker
   import LiveCode.Editor, only: [editor: 1]
 
   @page_size 50
@@ -3398,32 +3399,36 @@ defmodule Lantern.Explorer do
             class="lt-input"
           />
         <% :date -> %>
-          <input
-            type="date"
+          <DatePicker.date_picker
+            id={"#{dom_suffix(@form)}-#{dom_suffix(@name)}-date"}
             form={@form}
-            name={@name} aria-label={@name}
+            name={@name}
+            aria-label={@name}
             value={Coercion.control_value(@value, :date)}
-            class="lt-input"
+            size="sm"
+            class="lt-field-picker"
           />
         <% :datetime -> %>
-          <input
-            type="datetime-local"
-            step="0.001"
+          <DatePicker.date_time_picker
+            id={"#{dom_suffix(@form)}-#{dom_suffix(@name)}-datetime"}
             form={@form}
             name={@name}
             aria-label={@name}
             value={Coercion.control_value(@value, :datetime)}
-            class="lt-input"
+            precision={:millisecond}
+            size="sm"
+            class="lt-field-picker"
           />
         <% :time -> %>
-          <input
-            type="time"
-            step="0.001"
+          <DatePicker.time_picker
+            id={"#{dom_suffix(@form)}-#{dom_suffix(@name)}-time"}
             form={@form}
             name={@name}
             aria-label={@name}
             value={Coercion.control_value(@value, :time)}
-            class="lt-input"
+            precision={:millisecond}
+            size="sm"
+            class="lt-field-picker"
           />
         <% _ -> %>
           <input

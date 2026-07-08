@@ -93,8 +93,13 @@ Import the bundled stylesheet so the explorer looks good out of the box. With
 esbuild/Tailwind, import it from the dep in your `app.css`:
 
 ```css
+@import "../../deps/lantern_ui/priv/static/lantern_ui.css";
 @import "../../deps/lantern/priv/static/lantern/lantern.css";
 ```
+
+(`lantern_ui.css` carries the design tokens and the date/time picker styles —
+Lantern's cell editors use the [lantern_ui](https://hex.pm/packages/lantern_ui)
+component library. Skip it only if your app already imports lantern_ui itself.)
 
 It's self-contained and lives in a low-priority `@layer lantern`, so any rule
 you write outside that layer overrides it. Re-theme by setting `--lt-*`
@@ -162,15 +167,18 @@ LiveView hook. Register it on your `LiveSocket`. With esbuild, point at the dep:
 
 ```js
 import { LanternGrid } from "../deps/lantern/priv/static/lantern/hooks"
+import LanternUIHooks from "../deps/lantern_ui/priv/static/lantern_ui_hooks"
 
 const liveSocket = new LiveSocket("/live", Socket, {
   params: { _csrf_token: csrfToken },
-  hooks: { LanternGrid },
+  hooks: { ...LanternUIHooks, LanternGrid },
 })
 ```
 
-(Browsing and editing still work without the hook — you just lose resizing,
-one-click NULL, and the JSON syntax highlight.)
+`LanternUIHooks` powers the date/time cell editors (segmented keyboard entry +
+calendar popover). Browsing still works without the hooks — you lose resizing,
+one-click NULL, the JSON syntax highlight, and picker interactivity (the
+date/time fields then submit their last rendered value).
 
 ## Headless data API
 
