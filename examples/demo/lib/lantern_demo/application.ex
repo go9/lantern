@@ -5,7 +5,11 @@ defmodule LanternDemo.Application do
 
   @impl true
   def start(_type, _args) do
-    LanternDemo.DemoDB.ensure!()
+    # The seeded demo database is only used by the DB-viewer page and is only
+    # configured in prod (LANTERN_DEMO_DATABASE_URL). Locally there's no DB, so
+    # skip the seed — the components reference and everything else run without
+    # Postgres. The DB-viewer page degrades gracefully when unconfigured.
+    if demo_db_configured?(), do: LanternDemo.DemoDB.ensure!()
 
     children = [
       {Phoenix.PubSub, name: LanternDemo.PubSub},
@@ -22,4 +26,6 @@ defmodule LanternDemo.Application do
     LanternDemoWeb.Endpoint.config_change(changed, removed)
     :ok
   end
+
+  defp demo_db_configured?, do: System.get_env("LANTERN_DEMO_DATABASE_URL") not in [nil, ""]
 end

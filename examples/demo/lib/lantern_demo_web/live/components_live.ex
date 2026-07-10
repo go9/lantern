@@ -19,6 +19,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.EmptyState
   alias LanternUI.Components.Form
   alias LanternUI.Components.Icon
+  alias LanternUI.Components.Layout
   alias LanternUI.Components.Modal
 
   @groups LanternDemoWeb.DocsShell.component_groups()
@@ -27,6 +28,22 @@ defmodule LanternDemoWeb.ComponentsLive do
   @default_slug "button"
 
   @snippets %{
+    "app-shell" => ~S"""
+    <.app_shell id="app">
+      <:brand><.icon name="bolt" /> <span class="lui-brand-name">Acme</span></:brand>
+      <:header><.breadcrumb>…</.breadcrumb></:header>
+      <:actions><.button variant="outline" size="sm">Account</.button></:actions>
+
+      <:sidebar>
+        <.nav_group label="Workspace">
+          <.nav_item label="Dashboard" icon="chart-bar" navigate={~p"/"} active />
+          <.nav_item label="Buckets" icon="cloud" navigate={~p"/buckets"} />
+        </.nav_group>
+      </:sidebar>
+
+      <%!-- page content --%>
+    </.app_shell>
+    """,
     "button" => ~S"""
     <.button variant="solid" color="primary">Save</.button>
     <.button size="icon" aria-label="Add"><.icon name="plus" /></.button>
@@ -186,17 +203,41 @@ defmodule LanternDemoWeb.ComponentsLive do
   def render(assigns) do
     ~H"""
     <LanternDemoWeb.DocsShell.shell current={@current} theme={@theme} density={@density}>
-        <div class="docs-topbar">
-          <div class="docs-crumb">Components <span>/</span> {@label}</div>
-          <div class="docs-toggles">
-            <Button.button variant="outline" size="sm" phx-click="theme">
-              <Icon.icon name={if @theme == "dark", do: "check", else: "minus"} /> Dark
-            </Button.button>
-            <Button.button variant="outline" size="sm" phx-click="density">
-              {String.capitalize(@density)}
-            </Button.button>
+        <:actions>
+          <Button.button variant="outline" size="sm" phx-click="theme">
+            <Icon.icon name={if @theme == "dark", do: "check", else: "minus"} /> Dark
+          </Button.button>
+          <Button.button variant="outline" size="sm" phx-click="density">
+            {String.capitalize(@density)}
+          </Button.button>
+        </:actions>
+
+        <article :if={@current == "app-shell"} class="docs-body">
+          <h1>App shell</h1>
+          <p>
+            The chrome around this page — the top bar (brand · breadcrumb · actions), the
+            fixed collapsible sidebar, and the main column — <strong>is</strong>
+            <code>&lt;.app_shell&gt;</code>, built from lantern-ui components. Slots:
+            <code>:brand</code> (corner logo), <code>:header</code> (inline
+            breadcrumbs/switchers), <code>:actions</code> (top-right), and
+            <code>:sidebar</code> (<code>nav_group</code> / <code>nav_item</code>). The
+            collapse control at the sidebar foot persists per <code>id</code>.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-navdemo">
+              <Layout.nav_group label="Workspace">
+                <Layout.nav_item label="Dashboard" icon="chart-bar" href="#" active />
+                <Layout.nav_item label="Buckets" icon="cloud" href="#" />
+                <Layout.nav_item label="Settings" icon="squares-2x2" href="#" />
+              </Layout.nav_group>
+            </div>
+            <p class="docs-caption">
+              Live <code>nav_item</code>s — icon, label, active state. The top bar and the
+              persisted collapse come from the surrounding <code>app_shell</code>.
+            </p>
           </div>
-        </div>
+          <pre class="docs-code"><code>{@snippets["app-shell"]}</code></pre>
+        </article>
 
         <article :if={@current == "button"} class="docs-body">
           <h1>Button</h1>
@@ -525,6 +566,9 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-demo { border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-lg);
           padding: 1.5rem; background: var(--lantern-surface-raised); display: flex;
           flex-direction: column; gap: .875rem; }
+        .docs-navdemo { max-width: 15rem; border: 1px solid var(--lantern-border);
+          border-radius: var(--lantern-radius-md); padding: .6rem; background: var(--lantern-surface); }
+        .docs-caption { font-size: .8125rem; color: var(--lantern-fg-muted); margin: 0; }
         .docs-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
         .docs-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
         .docs-icons { gap: .875rem; }

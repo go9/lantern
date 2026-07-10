@@ -1,17 +1,22 @@
 defmodule LanternDemoWeb.DocsShell do
   @moduledoc """
-  The shared ecosystem shell: fixed left sidebar (tools + component nav) with
-  the page's content in the main column. Both the DB-viewer demo (`/`) and the
-  components reference (`/components/*`) render inside it, so the whole lantern
-  ecosystem reads as one product.
+  The shared ecosystem shell, built on lantern_ui's own `sidebar_layout`
+  (dogfood): a collapsible sidebar (logo + grouped tool/component nav) beside
+  the page content, with a topbar carrying the collapse toggle, a breadcrumb,
+  and the page's own actions. Both the DB-viewer demo (`/`) and the components
+  reference (`/components/*`) render inside it.
 
-  `current` picks the highlighted nav item: `"db"` for the DB viewer, or a
-  component slug. `theme` is `"system" | "light" | "dark"` — dark adds the
-  `.dark` class that flips the `--lantern-*` tokens for the whole shell.
+  `current` picks the highlighted nav item (`"db"` or a component slug). `theme`
+  adds `.dark`; `density` sets the lantern density.
   """
   use Phoenix.Component
 
+  alias LanternUI.Components.Breadcrumb
+  alias LanternUI.Components.Icon
+  alias LanternUI.Components.Layout
+
   @component_groups [
+    {"Layout", [{"app-shell", "App shell"}]},
     {"Components",
      [
        {"button", "Button"},
@@ -37,98 +42,88 @@ defmodule LanternDemoWeb.DocsShell do
 
   def component_groups, do: @component_groups
 
+  @labels Map.new([{"db", "DB viewer"} | Enum.flat_map(@component_groups, fn {_g, i} -> i end)])
+
   attr(:current, :string, required: true)
   attr(:theme, :string, default: "system")
   attr(:density, :string, default: "compact")
+  slot(:actions)
   slot(:inner_block, required: true)
 
   def shell(assigns) do
-    assigns = assign(assigns, :groups, @component_groups)
+    assigns =
+      assigns
+      |> assign(:groups, @component_groups)
+      |> assign(:label, Map.get(@labels, assigns.current, "Lantern"))
 
     ~H"""
-    <div class={["docs", @theme == "dark" && "dark"]} data-lantern-density={@density}>
-      <aside class="docs-side">
-        <div class="docs-brand">
-          <span class="docs-logo">lantern</span>
-          <span class="docs-ver">
-            <a href="https://hex.pm/packages/lantern_ui">hex.pm</a>
-            · <a href="https://lantern-ui.hexdocs.pm">docs</a>
-            · <a href="https://github.com/go9/lantern-ui">github</a>
-          </span>
-        </div>
+    <Layout.app_shell
+      id="lantern-demo-shell"
+      class={@theme == "dark" && "dark"}
+      data-lantern-density={@density}
+    >
+      <:brand>
+        <Icon.icon name="squares-2x2" /> <span class="lui-brand-name">lantern</span>
+      </:brand>
+      <:header>
+        <Breadcrumb.breadcrumb aria_label="Location">
+          <:item>{if @current == "db", do: "Tools", else: "Components"}</:item>
+          <:item current>{@label}</:item>
+        </Breadcrumb.breadcrumb>
+      </:header>
+      <:actions>{render_slot(@actions)}</:actions>
 
-        <nav class="docs-nav">
-          <div class="docs-group">
-            <div class="docs-group-label">Tools</div>
-            <.link navigate="/" class={["docs-item", @current == "db" && "active"]}>
-              DB viewer
-            </.link>
-            <span class="docs-item docs-soon">S3 viewer — soon</span>
-          </div>
-          <div :for={{group, items} <- @groups} class="docs-group">
-            <div class="docs-group-label">{group}</div>
-            <.link
-              :for={{slug, label} <- items}
-              navigate={"/components/#{slug}"}
-              class={["docs-item", @current == slug && "active"]}
-            >
-              {label}
-            </.link>
-          </div>
-        </nav>
-      </aside>
+      <:sidebar>
+        <Layout.nav_group label="Tools">
+          <Layout.nav_item label="DB viewer" icon="circle-stack" navigate="/" active={@current == "db"} />
+          <Layout.nav_item label="S3 viewer — soon" icon="cloud" class="lui-nav-item-soon" />
+        </Layout.nav_group>
+        <Layout.nav_group :for={{group, items} <- @groups} label={group}>
+          <Layout.nav_item
+            :for={{slug, label} <- items}
+            label={label}
+            icon={icon_for(group, slug)}
+            navigate={"/components/#{slug}"}
+            active={@current == slug}
+          />
+        </Layout.nav_group>
+      </:sidebar>
 
-      <main class="docs-main">
-        {render_slot(@inner_block)}
-      </main>
+      {render_slot(@inner_block)}
+    </Layout.app_shell>
 
-      <style>
-        .docs { display: flex; min-height: 100vh; font-family: var(--lantern-font);
-          background: var(--lantern-surface); color: var(--lantern-fg);
-          transition: background .15s, color .15s; }
-        .docs-side { width: 230px; flex-shrink: 0; position: sticky; top: 0; height: 100vh;
-          overflow-y: auto; border-right: 1px solid var(--lantern-border);
-          padding: 1.25rem 1rem 2rem; box-sizing: border-box;
-          background: var(--lantern-surface); }
-        .docs-brand { padding: 0 .5rem; margin-bottom: 1.25rem; display: flex;
-          flex-direction: column; gap: .2rem; }
-        .docs-logo { font-size: 1rem; font-weight: 700; letter-spacing: -.02em; }
-        .docs-ver { font-size: .6875rem; color: var(--lantern-fg-subtle); }
-        .docs-ver a { color: var(--lantern-fg-muted); text-decoration: none; }
-        .docs-ver a:hover { color: var(--lantern-accent); }
-        .docs-group { margin-bottom: 1.25rem; }
-        .docs-group-label { font-size: .6875rem; font-weight: 600; text-transform: uppercase;
-          letter-spacing: .05em; color: var(--lantern-fg-subtle); padding: 0 .5rem;
-          margin-bottom: .25rem; }
-        .docs-item { display: block; font-size: .8125rem; color: var(--lantern-fg-muted);
-          text-decoration: none; padding: .3rem .5rem; border-radius: var(--lantern-radius-sm);
-          line-height: 1.4; }
-        .docs-item:hover { color: var(--lantern-fg); background: var(--lantern-surface-sunken); }
-        .docs-item.active { color: var(--lantern-accent); font-weight: 550;
-          background: var(--lantern-accent-soft); }
-        .docs-soon { color: var(--lantern-fg-subtle); cursor: default; }
-        .docs-soon:hover { color: var(--lantern-fg-subtle); background: none; }
-        .docs-main { flex: 1; min-width: 0; padding: 1.25rem 2.5rem 5rem; box-sizing: border-box; }
+    <style>
+      .lui-nav-item-soon { opacity: 0.5; pointer-events: none; }
 
-        /* Embedded DB-viewer demo: strip the standalone marketing chrome so it
-           reads as a tool page inside the shell (no gradient backdrop, no outer
-           padding, docs-scale headline). Sandbox panels keep their own styles. */
-        .docs .demo-shell { background: none; padding: 0; min-height: 0; }
-        .docs .demo-shell > * { max-width: 900px; margin-left: 0; margin-right: 0; }
-        .docs .demo-hero { margin-bottom: 1rem; }
-        .docs .demo-title { font-size: 1.5rem; }
-        .docs .demo-eyebrow { display: none; }
-
-        @media (max-width: 760px) {
-          .docs { flex-direction: column; }
-          .docs-side { position: static; width: 100%; height: auto; border-right: none;
-            border-bottom: 1px solid var(--lantern-border); padding-bottom: .75rem; }
-          .docs-nav { display: flex; gap: 1.25rem; overflow-x: auto; }
-          .docs-group { margin-bottom: 0; flex-shrink: 0; }
-          .docs-main { padding: 1.25rem 1.25rem 4rem; }
-        }
-      </style>
-    </div>
+      /* Embedded DB-viewer demo: drop the standalone marketing chrome so it reads
+         as a tool page inside the shell. */
+      .lui-app-main .demo-shell { background: none; padding: 0; min-height: 0; }
+      .lui-app-main .demo-shell > * { max-width: 940px; margin-left: 0; margin-right: 0; }
+      .lui-app-main .demo-hero { margin-bottom: 1rem; }
+      .lui-app-main .demo-title { font-size: 1.5rem; }
+      .lui-app-main .demo-eyebrow { display: none; }
+    </style>
     """
   end
+
+  @icons %{
+    "app-shell" => "view-columns",
+    "button" => "cursor-arrow-rays",
+    "icon" => "sparkles",
+    "input" => "pencil-square",
+    "datetime-field" => "clock",
+    "calendar" => "calendar",
+    "date-picker" => "calendar-days",
+    "checkbox" => "check-circle",
+    "modal" => "window",
+    "dropdown" => "chevron-up-down",
+    "breadcrumb" => "chevron-right",
+    "empty-state" => "inbox",
+    "area-chart" => "chart-bar",
+    "line-chart" => "presentation-chart-line",
+    "bar-chart" => "chart-bar",
+    "sparkline" => "arrow-trending-up"
+  }
+
+  defp icon_for(_group, slug), do: Map.get(@icons, slug, "squares-2x2")
 end

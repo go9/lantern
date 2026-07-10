@@ -14,8 +14,18 @@ defmodule LanternDemoWeb.Layouts do
         <title>Lantern Demo</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+        <link rel="stylesheet" href="/lantern_ui_theme.css" />
         <link rel="stylesheet" href="/lantern_ui.css" />
+        <style>
+          /* Feed lantern-ui the flicker type system: Space Grotesk brand/headings,
+             Inter body, JetBrains Mono for code. */
+          :root {
+            --lantern-font: "Inter", ui-sans-serif, system-ui, sans-serif;
+            --lantern-font-brand: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+            --lantern-font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+          }
+        </style>
         <link rel="stylesheet" href="/lantern/lantern.css" />
         <link rel="stylesheet" href="/livecode/livecode.css" />
         <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer>
