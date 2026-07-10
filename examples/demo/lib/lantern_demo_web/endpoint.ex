@@ -38,7 +38,7 @@ defmodule LanternDemoWeb.Endpoint do
     at: "/",
     from: {:lantern_ui, "priv/static"},
     gzip: false,
-    only: ~w(lantern_ui.css lantern_ui_hooks.js)
+    only: ~w(lantern_ui.css lantern_ui_theme.css lantern_ui_hooks.js)
   )
 
   plug(Plug.Static,
