@@ -33,7 +33,7 @@ defmodule Lantern.MixProject do
     [
       {:phoenix_live_view, "~> 1.1"},
       {:livecode, "~> 0.1"},
-      {:lantern_ui, path: "../lantern-ui-appshell"},
+      {:lantern_ui, github: "go9/lantern-ui"},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
