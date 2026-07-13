@@ -165,7 +165,7 @@ defmodule LanternDemoWeb.DataTableDemo do
           />
 
           <:filter field={:buyer} type={:text} label="Buyer" placeholder="Any buyer" />
-          <:filter field={:channel} label="Channel" options={["eBay", "Shopify", "Direct"]} />
+          <:filter field={:channel} label="Channel" multiple searchable options={["eBay", "Shopify", "Direct"]} />
           <:filter
             field={:status}
             label="Status"
@@ -269,6 +269,9 @@ defmodule LanternDemoWeb.DataTableDemo do
           {max, _} -> order.total <= max
           _ -> true
         end
+
+      %{field: "channel", op: "in", value: vs} ->
+        order.channel in List.wrap(vs)
 
       %{field: "channel", value: v} ->
         order.channel == v
