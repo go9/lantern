@@ -164,7 +164,14 @@ defmodule LanternDemoWeb.DataTableDemo do
             filters={[%{field: "status", value: "refunded"}]}
           />
 
+          <:filter field={:buyer} type={:text} label="Buyer" placeholder="Any buyer" />
           <:filter field={:channel} label="Channel" options={["eBay", "Shopify", "Direct"]} />
+          <:filter
+            field={:status}
+            label="Status"
+            options={[{"Pending", "pending"}, {"Shipped", "shipped"}, {"Refunded", "refunded"}]}
+          />
+          <:filter field={:total} type={:range} label="Total ($)" />
 
           <:col :let={o} label="Order" field={:reference} sortable>
             <span style="font-family: var(--lantern-font-mono); font-size: 0.75rem;">
@@ -172,8 +179,8 @@ defmodule LanternDemoWeb.DataTableDemo do
             </span>
           </:col>
           <:col :let={o} label="Buyer" field={:buyer} sortable>{o.buyer}</:col>
-          <:col :let={o} label="Channel">{o.channel}</:col>
-          <:col :let={o} label="Status">
+          <:col :let={o} label="Channel" field={:channel} sortable>{o.channel}</:col>
+          <:col :let={o} label="Status" field={:status} sortable>
             <Badge.badge size="sm" color={status_color(o.status)}>{o.status}</Badge.badge>
           </:col>
           <:col :let={o} label="Total" field={:total} sortable td_class="lui-td-num">
@@ -236,7 +243,7 @@ defmodule LanternDemoWeb.DataTableDemo do
   defp parse_filters(filters) when is_map(filters) do
     filters
     |> Map.values()
-    |> Enum.map(fn f -> %{field: f["field"], value: f["value"]} end)
+    |> Enum.map(fn f -> %{field: f["field"], op: f["op"], value: f["value"]} end)
     |> Enum.reject(&(&1.value in [nil, ""]))
   end
 
@@ -247,6 +254,21 @@ defmodule LanternDemoWeb.DataTableDemo do
 
         String.contains?(String.downcase(order.buyer), q) or
           String.contains?(String.downcase(order.reference), q)
+
+      %{field: "buyer", value: v} ->
+        String.contains?(String.downcase(order.buyer), String.downcase(v))
+
+      %{field: "total", op: ">=", value: v} ->
+        case Float.parse(to_string(v)) do
+          {min, _} -> order.total >= min
+          _ -> true
+        end
+
+      %{field: "total", op: "<=", value: v} ->
+        case Float.parse(to_string(v)) do
+          {max, _} -> order.total <= max
+          _ -> true
+        end
 
       %{field: "channel", value: v} ->
         order.channel == v
@@ -264,6 +286,8 @@ defmodule LanternDemoWeb.DataTableDemo do
       case field do
         "buyer" -> & &1.buyer
         "total" -> & &1.total
+        "channel" -> & &1.channel
+        "status" -> & &1.status
         _ -> & &1.reference
       end
 
