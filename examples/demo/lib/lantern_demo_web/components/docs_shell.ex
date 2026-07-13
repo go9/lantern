@@ -17,6 +17,15 @@ defmodule LanternDemoWeb.DocsShell do
 
   @component_groups [
     {"Layout", [{"app-shell", "App shell"}]},
+    {"Data",
+     [
+       {"data-table", "Data table"},
+       {"table", "Table"},
+       {"pagination", "Pagination"},
+       {"tabs", "Tabs"},
+       {"select", "Select"},
+       {"badge", "Badge"}
+     ]},
     {"Components",
      [
        {"button", "Button"},
@@ -108,6 +117,12 @@ defmodule LanternDemoWeb.DocsShell do
 
   @icons %{
     "app-shell" => "view-columns",
+    "data-table" => "circle-stack",
+    "table" => "bars-3",
+    "pagination" => "ellipsis-horizontal",
+    "tabs" => "view-columns",
+    "select" => "chevron-up-down",
+    "badge" => "check-circle",
     "button" => "cursor-arrow-rays",
     "icon" => "sparkles",
     "input" => "pencil-square",

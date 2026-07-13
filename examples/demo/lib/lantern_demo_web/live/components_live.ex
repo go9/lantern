@@ -13,11 +13,16 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Calendar
   alias LanternUI.Components.DatePicker
   alias LanternUI.Components.DatetimeField
+  alias LanternUI.Components.Badge
   alias LanternUI.Components.Breadcrumb
   alias LanternUI.Components.Checkbox
   alias LanternUI.Components.Dropdown
   alias LanternUI.Components.EmptyState
   alias LanternUI.Components.Form
+  alias LanternUI.Components.Pagination
+  alias LanternUI.Components.Select
+  alias LanternUI.Components.Table
+  alias LanternUI.Components.Tabs
   alias LanternUI.Components.Icon
   alias LanternUI.Components.Layout
   alias LanternUI.Components.Modal
@@ -82,6 +87,33 @@ defmodule LanternDemoWeb.ComponentsLive do
     """,
     "bar-chart" => ~S"""
     <.bar_chart id="q" series={[%{label: "Q1", value: 42}, %{label: "Q2", value: 31}]} />
+    """,
+    "badge" => ~S"""
+    <.badge color="success">Shipped</.badge>
+    <.badge color="danger" variant="solid" size="sm">Failed</.badge>
+    """,
+    "table" => ~S"""
+    <.table>
+      <.table_head><:col>Name</:col><:col class="lui-th-num">Total</:col></.table_head>
+      <.table_body>
+        <.table_row :for={o <- @orders} selected={o.id in @selected}>
+          <:cell>{o.name}</:cell><:cell class="lui-td-num">{o.total}</:cell>
+        </.table_row>
+      </.table_body>
+    </.table>
+    """,
+    "tabs" => ~S"""
+    <.tabs_list active_tab={@tab}>
+      <:tab name="all" patch={~p"/orders?tab=all"}>All <.badge size="sm">{@count}</.badge></:tab>
+      <:tab name="pending" patch={~p"/orders?tab=pending"}>Pending</:tab>
+    </.tabs_list>
+    """,
+    "select" => ~S"""
+    <.select field={@form[:channel]} label="Channel" options={["eBay", "Shopify"]} />
+    <.select name="size" native value={25} options={[10, 25, 50]} />
+    """,
+    "pagination" => ~S"""
+    <.pagination meta={@meta} patch_fn={fn p -> ~p"/orders?#{p}" end} />
     """,
     "sparkline" => ~S"""
     <.sparkline id="s" series={[3, 5, 4, 8, 6, 9]} height={48} />
@@ -160,6 +192,7 @@ defmodule LanternDemoWeb.ComponentsLive do
        groups: @groups,
        snippets: @snippets,
        theme: "light",
+       demo_tab: "one",
        density: "compact",
        area: area,
        line: line,
@@ -186,6 +219,10 @@ defmodule LanternDemoWeb.ComponentsLive do
        label: Map.fetch!(@labels, slug),
        page_title: "#{Map.fetch!(@labels, slug)} — lantern-ui"
      )}
+  end
+
+  def handle_event("demo_tab", %{"tab" => tab}, socket) do
+    {:noreply, assign(socket, :demo_tab, tab)}
   end
 
   def handle_event("theme", _params, socket) do
@@ -537,6 +574,132 @@ defmodule LanternDemoWeb.ComponentsLive do
             <Charts.bar_chart id="ch-bar" series={@bars} height={200} />
           </div>
           <pre class="docs-code"><code>{@snippets["bar-chart"]}</code></pre>
+        </article>
+
+
+        <article :if={@current == "badge"} class="docs-body">
+          <h1>Badge</h1>
+          <p>Status pills — colors × variants × sizes.</p>
+          <div class="docs-demo">
+            <div class="docs-row">
+              <Badge.badge :for={c <- ~w(neutral primary accent success warning danger)} color={c}>
+                {c}
+              </Badge.badge>
+            </div>
+            <div class="docs-row">
+              <Badge.badge :for={v <- ~w(soft solid outline)} variant={v} color="accent">{v}</Badge.badge>
+              <Badge.badge size="sm" color="success">sm</Badge.badge>
+              <Badge.badge size="lg" color="danger">lg</Badge.badge>
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["badge"]}</code></pre>
+        </article>
+
+        <article :if={@current == "table"} class="docs-body">
+          <h1>Table</h1>
+          <p>
+            The presentational family <code>data_table</code> composes — use it directly
+            for simple, non-Flop tables.
+          </p>
+          <div class="docs-demo">
+            <Table.table>
+              <Table.table_head>
+                <:col>Name</:col>
+                <:col>Role</:col>
+                <:col class="lui-th-num">Commits</:col>
+              </Table.table_head>
+              <Table.table_body>
+                <Table.table_row>
+                  <:cell>Ada Lovelace</:cell>
+                  <:cell>Analyst</:cell>
+                  <:cell class="lui-td-num">1,842</:cell>
+                </Table.table_row>
+                <Table.table_row selected>
+                  <:cell>Grace Hopper</:cell>
+                  <:cell>Rear Admiral</:cell>
+                  <:cell class="lui-td-num">2,214</:cell>
+                </Table.table_row>
+              </Table.table_body>
+            </Table.table>
+          </div>
+          <pre class="docs-code"><code>{@snippets["table"]}</code></pre>
+        </article>
+
+        <article :if={@current == "tabs"} class="docs-body">
+          <h1>Tabs</h1>
+          <p>
+            Segmented or underline tab lists with server-driven active state; tabs given
+            <code>patch</code> render as links so tab state can live in the URL.
+          </p>
+          <div class="docs-demo">
+            <Tabs.tabs id="demo-tabs">
+              <Tabs.tabs_list active_tab={@demo_tab}>
+                <:tab name="one" phx-click="demo_tab">First <Badge.badge size="sm">12</Badge.badge></:tab>
+                <:tab name="two" phx-click="demo_tab">Second</:tab>
+                <:tab name="three" phx-click="demo_tab">Third</:tab>
+              </Tabs.tabs_list>
+              <Tabs.tabs_panel name="one" active={@demo_tab == "one"}>First panel content.</Tabs.tabs_panel>
+              <Tabs.tabs_panel name="two" active={@demo_tab == "two"}>Second panel content.</Tabs.tabs_panel>
+              <Tabs.tabs_panel name="three" active={@demo_tab == "three"}>Third panel content.</Tabs.tabs_panel>
+            </Tabs.tabs>
+            <Tabs.tabs_list active_tab="b" variant="underline" size="sm">
+              <:tab name="a">Underline</:tab>
+              <:tab name="b">Variant</:tab>
+            </Tabs.tabs_list>
+          </div>
+          <pre class="docs-code"><code>{@snippets["tabs"]}</code></pre>
+        </article>
+
+        <article :if={@current == "select"} class="docs-body">
+          <h1>Select</h1>
+          <p>
+            FormField-aware select (Fluxon API): rich listbox with keyboard nav +
+            type-ahead over a hidden input, or a <code>native</code> fallback.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-grid2">
+              <Select.select
+                id="sel-1"
+                name="channel"
+                label="Channel"
+                options={[{"eBay", "ebay"}, {"Shopify", "shopify"}, {"Direct", "direct"}]}
+                placeholder="Pick a channel"
+              />
+              <Select.select
+                id="sel-2"
+                name="status"
+                label="Status"
+                value="active"
+                options={[{"Active", "active"}, {"Archived", "archived"}]}
+              />
+              <Select.select id="sel-3" name="size" label="Native" native value={25} options={[10, 25, 50]} />
+              <Select.select
+                id="sel-4"
+                name="bad"
+                label="With error"
+                options={["a"]}
+                errors={["can't be blank"]}
+              />
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["select"]}</code></pre>
+        </article>
+
+        <article :if={@current == "pagination"} class="docs-body">
+          <h1>Pagination</h1>
+          <p>
+            Pager + page-size control, duck-typed to <code>Flop.Meta</code> (no flop
+            dependency) — all patch navigation. Fluxon has no equivalent; this replaces
+            flop_phoenix's pager.
+          </p>
+          <div class="docs-demo">
+            <Pagination.pagination
+              id="pg-demo"
+              meta={%{current_page: 5, total_pages: 20, page_size: 25, total_count: 487}}
+              patch_fn={fn params -> "/components/pagination?" <> Plug.Conn.Query.encode(params) end}
+            />
+          </div>
+          <pre class="docs-code"><code>{@snippets["pagination"]}</code></pre>
         </article>
 
         <article :if={@current == "sparkline"} class="docs-body">
