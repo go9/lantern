@@ -68,6 +68,7 @@ defmodule LanternDemoWeb.DataTableDemo do
     {:noreply,
      assign(socket,
        rows: rows,
+       matching_ids: Enum.map(sorted, & &1.id),
        meta: meta,
        counts: counts,
        view: params["view"] || "table",
@@ -102,6 +103,10 @@ defmodule LanternDemoWeb.DataTableDemo do
      )}
   end
 
+  def handle_event("select_all_matching", _params, socket) do
+    {:noreply, assign(socket, :selected, MapSet.new(socket.assigns.matching_ids))}
+  end
+
   def handle_event("clear_selection", _params, socket) do
     {:noreply, assign(socket, :selected, MapSet.new())}
   end
@@ -134,6 +139,8 @@ defmodule LanternDemoWeb.DataTableDemo do
           search_field={:q}
           search_placeholder="Search buyer or reference…"
           view={@view}
+          subtitle="57 in-memory orders — every control patches the URL"
+          info_modal_id="orders-info"
         >
           <:stat label="Revenue (all)" value={"$#{@revenue}"} />
           <:stat label="Orders" value={length(@rows)} />
@@ -202,6 +209,15 @@ defmodule LanternDemoWeb.DataTableDemo do
 
           <:empty>No orders match — clear the search or filters above.</:empty>
         </DataTable.data_table>
+
+        <LanternUI.Components.Modal.modal id="orders-info">
+          <h3 style="margin:0 0 .4rem; font-size:1rem;">About this table</h3>
+          <p style="margin:0; font-size:.85rem; color: var(--lantern-fg-muted);">
+            Demo dataset. In a real app, rows/meta come from one
+            <code>Flop.validate_and_run/3</code> call; this page hand-parses the same
+            URL params to stay database-free.
+          </p>
+        </LanternUI.Components.Modal.modal>
 
         <pre class="docs-code" style="margin-top:1.25rem;"><code>{snippet()}</code></pre>
       </article>
