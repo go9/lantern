@@ -27,6 +27,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Radio
   alias LanternUI.Components.Select
   alias LanternUI.Components.Separator
+  alias LanternUI.Components.Sheet
   alias LanternUI.Components.Switch
   alias LanternUI.Components.Table
   alias LanternUI.Components.Tabs
@@ -1530,6 +1531,111 @@ defmodule LanternDemoWeb.ComponentsLive do
               {p}
             </Button.button>
           </div>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "sheet"} class="docs-body">
+        <h1>Sheet</h1>
+        <p>
+          Slide-over panel (drawer) that enters from a screen edge. Shares the modal's
+          <code>open_dialog</code>/<code>close_dialog</code> runtime with focus trap and Escape/backdrop dismissal.
+        </p>
+        <.demo_section
+          title="Trigger & content"
+          description="A button opens the sheet; it shares the modal's open_dialog/close_dialog runtime."
+          code={~S'''
+          <.button phx-click={open_dialog("settings")}>Open sheet</.button>
+
+          <.sheet id="settings" title="Edit settings">
+            <p>Sheet body content goes here.</p>
+            <:footer>
+              <.button variant="outline" size="sm" phx-click={close_dialog("settings")}>Cancel</.button>
+              <.button variant="solid" size="sm" phx-click={close_dialog("settings")}>Save</.button>
+            </:footer>
+          </.sheet>
+          '''}
+        >
+          <Button.button phx-click={LanternUI.open_dialog("sheet-basic")}>Open sheet</Button.button>
+          <Sheet.sheet id="sheet-basic" title="Edit settings">
+            <p>
+              Sheet body content goes here. Focus is trapped; Escape or the backdrop closes it.
+            </p>
+            <:footer>
+              <Button.button
+                variant="outline"
+                size="sm"
+                phx-click={LanternUI.close_dialog("sheet-basic")}
+              >
+                Cancel
+              </Button.button>
+              <Button.button
+                variant="solid"
+                size="sm"
+                phx-click={LanternUI.close_dialog("sheet-basic")}
+              >
+                Save
+              </Button.button>
+            </:footer>
+          </Sheet.sheet>
+        </.demo_section>
+
+        <.demo_section
+          title="Placement"
+          description="Slides in from any edge — left, right (default), top, or bottom."
+          code={~S'''
+          <.sheet id="nav" placement="left">…</.sheet>
+          <.sheet id="panel" placement="right">…</.sheet>
+          <.sheet id="banner" placement="top">…</.sheet>
+          <.sheet id="tray" placement="bottom">…</.sheet>
+          '''}
+        >
+          <div class="docs-row">
+            <Button.button phx-click={LanternUI.open_dialog("sheet-left")}>left</Button.button>
+            <Button.button phx-click={LanternUI.open_dialog("sheet-right")}>right</Button.button>
+            <Button.button phx-click={LanternUI.open_dialog("sheet-top")}>top</Button.button>
+            <Button.button phx-click={LanternUI.open_dialog("sheet-bottom")}>bottom</Button.button>
+          </div>
+          <Sheet.sheet id="sheet-left" placement="left" title="left">
+            <p>Slides in from the left.</p>
+          </Sheet.sheet>
+          <Sheet.sheet id="sheet-right" placement="right" title="right">
+            <p>Slides in from the right.</p>
+          </Sheet.sheet>
+          <Sheet.sheet id="sheet-top" placement="top" title="top">
+            <p>Slides in from the top.</p>
+          </Sheet.sheet>
+          <Sheet.sheet id="sheet-bottom" placement="bottom" title="bottom">
+            <p>Slides in from the bottom.</p>
+          </Sheet.sheet>
+        </.demo_section>
+
+        <.demo_section
+          title="Prevent closing"
+          description="prevent_closing removes the close button and disables Escape/backdrop dismissal — the sheet must be closed by an explicit action."
+          code={~S'''
+          <.sheet id="confirm" title="Confirm" prevent_closing>
+            <p>You must choose an action.</p>
+            <:footer>
+              <.button variant="solid" size="sm" phx-click={close_dialog("confirm")}>Done</.button>
+            </:footer>
+          </.sheet>
+          '''}
+        >
+          <Button.button phx-click={LanternUI.open_dialog("sheet-locked")}>
+            Open locked sheet
+          </Button.button>
+          <Sheet.sheet id="sheet-locked" title="Confirm" prevent_closing>
+            <p>You must choose an action.</p>
+            <:footer>
+              <Button.button
+                variant="solid"
+                size="sm"
+                phx-click={LanternUI.close_dialog("sheet-locked")}
+              >
+                Done
+              </Button.button>
+            </:footer>
+          </Sheet.sheet>
         </.demo_section>
       </article>
 
