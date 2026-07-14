@@ -9,6 +9,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   use Phoenix.LiveView
 
   alias LanternUI.Charts
+  alias LanternUI.Components.Alert
   alias LanternUI.Components.Button
   alias LanternUI.Components.Calendar
   alias LanternUI.Components.DatePicker
@@ -20,9 +21,15 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.EmptyState
   alias LanternUI.Components.Form
   alias LanternUI.Components.Pagination
+  alias LanternUI.Components.Radio
   alias LanternUI.Components.Select
+  alias LanternUI.Components.Separator
+  alias LanternUI.Components.Switch
   alias LanternUI.Components.Table
   alias LanternUI.Components.Tabs
+  alias LanternUI.Components.Textarea
+  alias LanternUI.Components.Toast
+  alias LanternUI.Components.Tooltip
   alias LanternUI.Components.Icon
   alias LanternUI.Components.Layout
   alias LanternUI.Components.Modal
@@ -155,6 +162,54 @@ defmodule LanternDemoWeb.ComponentsLive do
       Drop files here to upload them.
       <:action><.button size="sm">Upload</.button></:action>
     </.empty_state>
+    """,
+    "switch" => ~S"""
+    <.switch name="dark" label="Dark mode" />
+    <.switch name="notify" checked label="Notifications" description="Push alerts." />
+    <.switch name="off" label="Disabled" disabled />
+    """,
+    "radio" => ~S"""
+    <.radio name="plan" value="pro" label="Plan">
+      <:radio value="basic" label="Basic" />
+      <:radio value="pro" label="Pro" sublabel="Popular" />
+      <:radio value="enterprise" label="Enterprise" />
+    </.radio>
+
+    <.radio name="tier" variant="cards" label="Tier">
+      <:radio value="free" label="Free" description="Hobby projects" />
+      <:radio value="team" label="Team" description="Collaboration" />
+    </.radio>
+    """,
+    "textarea" => ~S"""
+    <.textarea name="notes" label="Notes" help_text="A short intro." rows={4} />
+    <.textarea name="bio" label="Bio" value="too short" errors={["is too short"]} />
+    """,
+    "alert" => ~S"""
+    <.alert color="success" title="Saved">Your changes were stored.</.alert>
+    <.alert color="warning" title="Unsaved" hide_close={false}>
+      Discard or save before leaving.
+    </.alert>
+    """,
+    "separator" => ~S"""
+    <.separator />
+    <.separator text="or" />
+    <.separator vertical />
+    """,
+    "tooltip" => ~S"""
+    <.tooltip id="tip-1" value="More info" placement="top">
+      <.button size="sm">Hover me</.button>
+    </.tooltip>
+
+    <.tooltip id="tip-2" placement="bottom" arrow={false}>
+      <.button size="sm">No arrow</.button>
+      <:content><strong>Bold</strong> tip</:content>
+    </.tooltip>
+    """,
+    "toast" => ~S"""
+    <Toast.toast_group id="demo-toasts" />
+
+    <.button phx-click="demo_toast" phx-value-kind="info">Info</.button>
+    <.button phx-click="demo_toast" phx-value-kind="success">Success</.button>
     """
   }
 
@@ -223,6 +278,11 @@ defmodule LanternDemoWeb.ComponentsLive do
 
   def handle_event("demo_tab", %{"tab" => tab}, socket) do
     {:noreply, assign(socket, :demo_tab, tab)}
+  end
+
+  def handle_event("demo_toast", %{"kind" => kind}, socket) do
+    {:noreply,
+     LanternUI.send_toast(socket, kind, "This is a #{kind} toast", title: String.capitalize(kind))}
   end
 
   def handle_event("theme", _params, socket) do
@@ -700,6 +760,179 @@ defmodule LanternDemoWeb.ComponentsLive do
             />
           </div>
           <pre class="docs-code"><code>{@snippets["pagination"]}</code></pre>
+        </article>
+
+        <article :if={@current == "switch"} class="docs-body">
+          <h1>Switch</h1>
+          <p>
+            Toggle switch for binary settings. Sizes <code>sm</code>/<code>md</code>/<code>lg</code>,
+            with optional label and description.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-row" style="flex-direction: column; align-items: flex-start; gap: .75rem;">
+              <Switch.switch id="sw-1" name="sw_off" label="Unchecked" />
+              <Switch.switch id="sw-2" name="sw_on" checked label="Checked" />
+              <Switch.switch id="sw-3" name="sw_dis" label="Disabled" disabled />
+              <div class="docs-row">
+                <Switch.switch id="sw-sm" name="sw_sm" size="sm" label="sm" checked />
+                <Switch.switch id="sw-md" name="sw_md" size="md" label="md" checked />
+                <Switch.switch id="sw-lg" name="sw_lg" size="lg" label="lg" checked />
+              </div>
+              <Switch.switch
+                id="sw-4"
+                name="sw_desc"
+                checked
+                label="Email notifications"
+                description="At most one email per day."
+              />
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["switch"]}</code></pre>
+        </article>
+
+        <article :if={@current == "radio"} class="docs-body">
+          <h1>Radio</h1>
+          <p>
+            Exclusive single selection — <code>list</code> (default) or <code>cards</code> variant.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-grid2">
+              <Radio.radio id="rd-list" name="plan" value="pro" label="Plan" variant="list">
+                <:radio value="basic" label="Basic" />
+                <:radio value="pro" label="Pro" sublabel="Popular" />
+                <:radio value="enterprise" label="Enterprise" />
+              </Radio.radio>
+              <Radio.radio id="rd-cards" name="tier" value="team" label="Tier" variant="cards">
+                <:radio value="free" label="Free" description="Hobby projects" />
+                <:radio value="team" label="Team" description="Collaboration" />
+                <:radio value="scale" label="Scale" description="Growing teams" />
+              </Radio.radio>
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["radio"]}</code></pre>
+        </article>
+
+        <article :if={@current == "textarea"} class="docs-body">
+          <h1>Textarea</h1>
+          <p>
+            Multi-line text input with the same label, help text, and error chrome as
+            <code>input</code>.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-grid2">
+              <Textarea.textarea id="ta-1" name="notes" label="Notes" placeholder="Write something…" value={nil} />
+              <Textarea.textarea
+                id="ta-2"
+                name="bio"
+                label="Bio"
+                help_text="A short intro for your profile."
+                value={nil}
+              />
+              <Textarea.textarea
+                id="ta-3"
+                name="bad"
+                label="With error"
+                value="too short"
+                errors={["is too short (minimum is 20 characters)"]}
+              />
+              <Textarea.textarea id="ta-4" name="ro" label="Disabled" value="Read only content" disabled />
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["textarea"]}</code></pre>
+        </article>
+
+        <article :if={@current == "alert"} class="docs-body">
+          <h1>Alert</h1>
+          <p>
+            Inline status alerts — colors, optional close button, and hideable icon.
+          </p>
+          <div class="docs-demo">
+            <Alert.alert color="neutral" title="Note">A neutral status message.</Alert.alert>
+            <Alert.alert color="info" title="Info">Something you should know.</Alert.alert>
+            <Alert.alert color="success" title="Saved">Your changes were stored.</Alert.alert>
+            <Alert.alert color="warning" title="Careful">Review before continuing.</Alert.alert>
+            <Alert.alert color="danger" title="Failed">The request could not be completed.</Alert.alert>
+            <Alert.alert id="alert-close" color="warning" title="Unsaved" hide_close={false}>
+              Discard or save before leaving.
+            </Alert.alert>
+            <Alert.alert color="info" title="No icon" hide_icon>
+              Icon hidden via <code>hide_icon</code>.
+            </Alert.alert>
+          </div>
+          <pre class="docs-code"><code>{@snippets["alert"]}</code></pre>
+        </article>
+
+        <article :if={@current == "separator"} class="docs-body">
+          <h1>Separator</h1>
+          <p>Visual divider — horizontal, labeled, or vertical.</p>
+          <div class="docs-demo">
+            <p style="margin: 0; font-size: .875rem; color: var(--lantern-fg-muted);">Above the line</p>
+            <Separator.separator />
+            <p style="margin: 0; font-size: .875rem; color: var(--lantern-fg-muted);">Below the line</p>
+            <Separator.separator text="or" />
+            <div class="docs-row" style="align-items: stretch; gap: 1rem;">
+              <p style="margin: 0; font-size: .875rem; color: var(--lantern-fg-muted); max-width: 12rem;">
+                Left column with a short note about primary content.
+              </p>
+              <Separator.separator vertical />
+              <p style="margin: 0; font-size: .875rem; color: var(--lantern-fg-muted); max-width: 12rem;">
+                Right column for secondary detail or actions.
+              </p>
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["separator"]}</code></pre>
+        </article>
+
+        <article :if={@current == "tooltip"} class="docs-body">
+          <h1>Tooltip</h1>
+          <p>
+            Hover/focus tips with placement and optional arrow. Content can be a string or a
+            <code>:content</code> slot.
+          </p>
+          <div class="docs-demo">
+            <div class="docs-row">
+              <Tooltip.tooltip id="tip-top" value="Placed on top" placement="top">
+                <Button.button size="sm">Top</Button.button>
+              </Tooltip.tooltip>
+              <Tooltip.tooltip id="tip-bottom" value="Placed on bottom" placement="bottom">
+                <Button.button size="sm">Bottom</Button.button>
+              </Tooltip.tooltip>
+              <Tooltip.tooltip id="tip-content" placement="top">
+                <Button.button size="sm">Rich content</Button.button>
+                <:content>
+                  <strong>Bold</strong> tip with <em>markup</em>
+                </:content>
+              </Tooltip.tooltip>
+              <Tooltip.tooltip id="tip-no-arrow" value="No arrow" placement="bottom" arrow={false}>
+                <Button.button size="sm">No arrow</Button.button>
+              </Tooltip.tooltip>
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["tooltip"]}</code></pre>
+        </article>
+
+        <article :if={@current == "toast"} class="docs-body">
+          <h1>Toast</h1>
+          <p>
+            Stacked notifications via <code>toast_group</code> and
+            <code>LanternUI.send_toast/4</code>. Fire one of each kind below.
+          </p>
+          <div class="docs-demo">
+            <Toast.toast_group id="demo-toasts" />
+            <div class="docs-row">
+              <Button.button phx-click="demo_toast" phx-value-kind="info">Info</Button.button>
+              <Button.button phx-click="demo_toast" phx-value-kind="success" color="success">
+                Success
+              </Button.button>
+              <Button.button phx-click="demo_toast" phx-value-kind="warning" color="warning">
+                Warning
+              </Button.button>
+              <Button.button phx-click="demo_toast" phx-value-kind="danger" color="danger">
+                Danger
+              </Button.button>
+            </div>
+          </div>
+          <pre class="docs-code"><code>{@snippets["toast"]}</code></pre>
         </article>
 
         <article :if={@current == "sparkline"} class="docs-body">
