@@ -112,10 +112,8 @@ defmodule LanternDemoWeb.ComponentsLive do
      assign(socket,
        groups: @groups,
        snippets: @snippets,
-       theme: "light",
        demo_tab: "one",
        toast_placement: "top-right",
-       density: "compact",
        area: area,
        line: line,
        bars: [
@@ -156,30 +154,9 @@ defmodule LanternDemoWeb.ComponentsLive do
      LanternUI.send_toast(socket, kind, "This is a #{kind} toast", title: String.capitalize(kind))}
   end
 
-  def handle_event("theme", _params, socket) do
-    {:noreply,
-     assign(socket, theme: if(socket.assigns.theme == "dark", do: "light", else: "dark"))}
-  end
-
-  def handle_event("density", _params, socket) do
-    {:noreply,
-     assign(socket,
-       density: if(socket.assigns.density == "compact", do: "comfortable", else: "compact")
-     )}
-  end
-
   def render(assigns) do
     ~H"""
-    <LanternDemoWeb.DocsShell.shell current={@current} theme={@theme} density={@density}>
-      <:actions>
-        <Button.button variant="outline" size="sm" phx-click="theme">
-          <Icon.icon name={if @theme == "dark", do: "check", else: "minus"} /> Dark
-        </Button.button>
-        <Button.button variant="outline" size="sm" phx-click="density">
-          {String.capitalize(@density)}
-        </Button.button>
-      </:actions>
-
+    <LanternDemoWeb.DocsShell.shell current={@current}>
       <article :if={@current == "app-shell"} class="docs-body">
         <h1>App shell</h1>
         <p>

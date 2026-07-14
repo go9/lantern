@@ -12,6 +12,7 @@ defmodule LanternDemoWeb.DocsShell do
   use Phoenix.Component
 
   alias LanternUI.Components.Breadcrumb
+  alias LanternUI.Components.Button
   alias LanternUI.Components.Icon
   alias LanternUI.Components.Layout
   alias LanternUI.Components.Theme
@@ -90,7 +91,17 @@ defmodule LanternDemoWeb.DocsShell do
           <:item current>{@label}</:item>
         </Breadcrumb.breadcrumb>
       </:header>
-      <:actions>{render_slot(@actions)}</:actions>
+      <:actions>
+        <div id="demo-chrome" phx-hook="DemoChrome" data-shell="lantern-demo-shell" class="demo-chrome">
+          <Button.button variant="outline" size="sm" type="button" data-part="theme-toggle">
+            <span data-part="theme-label">Dark</span>
+          </Button.button>
+          <Button.button variant="outline" size="sm" type="button" data-part="density-toggle">
+            <span data-part="density-label">Compact</span>
+          </Button.button>
+        </div>
+        {render_slot(@actions)}
+      </:actions>
 
       <:sidebar>
         <Layout.nav_group label="Tools">
@@ -113,6 +124,7 @@ defmodule LanternDemoWeb.DocsShell do
     </Layout.app_shell>
 
     <style>
+      .demo-chrome { display: inline-flex; gap: 0.4rem; }
       .lui-nav-item-soon { opacity: 0.5; pointer-events: none; }
 
       /* Embedded DB-viewer demo: drop the standalone marketing chrome so it reads
