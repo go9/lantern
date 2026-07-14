@@ -113,6 +113,7 @@ defmodule LanternDemoWeb.ComponentsLive do
        snippets: @snippets,
        theme: "light",
        demo_tab: "one",
+       toast_placement: "top-right",
        density: "compact",
        area: area,
        line: line,
@@ -139,6 +140,10 @@ defmodule LanternDemoWeb.ComponentsLive do
        label: Map.fetch!(@labels, slug),
        page_title: "#{Map.fetch!(@labels, slug)} — lantern-ui"
      )}
+  end
+
+  def handle_event("set_toast_placement", %{"placement" => placement}, socket) do
+    {:noreply, assign(socket, :toast_placement, placement)}
   end
 
   def handle_event("demo_tab", %{"tab" => tab}, socket) do
@@ -1492,7 +1497,7 @@ defmodule LanternDemoWeb.ComponentsLive do
           <.button phx-click="demo_toast" phx-value-kind="danger">Danger</.button>
           '''}
         >
-          <Toast.toast_group id="demo-toasts" />
+          <Toast.toast_group id="demo-toasts" placement={@toast_placement} />
           <div class="docs-row">
             <Button.button phx-click="demo_toast" phx-value-kind="info">Info</Button.button>
             <Button.button phx-click="demo_toast" phx-value-kind="success" color="success">
@@ -1503,6 +1508,26 @@ defmodule LanternDemoWeb.ComponentsLive do
             </Button.button>
             <Button.button phx-click="demo_toast" phx-value-kind="danger" color="danger">
               Danger
+            </Button.button>
+          </div>
+        </.demo_section>
+
+        <.demo_section
+          title="Placement"
+          description="Any corner or edge-center. Pick one, then fire a toast — it enters from the nearest edge."
+          code={~S'''
+          <Toast.toast_group placement="bottom-center" />
+          '''}
+        >
+          <div class="docs-row">
+            <Button.button
+              :for={p <- ~w(top-left top-center top-right bottom-left bottom-center bottom-right)}
+              size="sm"
+              variant={if @toast_placement == p, do: "solid", else: "outline"}
+              phx-click="set_toast_placement"
+              phx-value-placement={p}
+            >
+              {p}
             </Button.button>
           </div>
         </.demo_section>

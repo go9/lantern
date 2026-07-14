@@ -280,6 +280,7 @@ defmodule LanternDemoWeb.ThemingLive do
   def render(assigns) do
     assigns =
       assign(assigns,
+        defaults: @defaults,
         defaults_json: Jason.encode!(@defaults),
         presets_json: Jason.encode!(@theme_presets),
         light_themes: @light_themes,
