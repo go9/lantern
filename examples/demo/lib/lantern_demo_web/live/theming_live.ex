@@ -1,591 +1,521 @@
 defmodule LanternDemoWeb.ThemingLive do
   @moduledoc """
-  Client-side runtime theming controls for the Lantern demo.
+  Theming — modeled on flicker's `admin_themes_live` branding panel, but
+  client-side (no DB): named themes per mode, active light/dark selection, and
+  a slide-over editor with a live preview + grouped color tokens.
+
+  Themes are defined in the **Fluxon semantic token vocabulary** (`primary`,
+  `foreground`, `background_base`, `border_base`, …) — the same names a flicker
+  theme uses — so a theme built here is portable to flicker, and applying one
+  flows through lantern-ui's Fluxon-token chain to re-skin every component.
+  Persistence is localStorage; a real app would back this with a DB like
+  flicker does.
   """
   use Phoenix.LiveView
 
-  alias LanternUI.Components.Alert
-  alias LanternUI.Components.Badge
   alias LanternUI.Components.Button
-  alias LanternUI.Components.Checkbox
-  alias LanternUI.Components.Radio
-  alias LanternUI.Components.Select
-  alias LanternUI.Components.Switch
-  alias LanternUI.Components.Tabs
+  alias LanternUI.Components.Icon
+  alias LanternUI.Components.Sheet
 
-  @light_status %{
-    danger: "#dc2626",
-    success: "#16a34a",
-    warning: "#d97706"
-  }
+  # Token groups + labels — identical grouping to flicker's theme editor.
+  @groups [
+    {"Primary Colors", ~w(primary primary_soft foreground_primary)},
+    {"Background Colors", ~w(background_base background_accent background_input surface overlay)},
+    {"Text Colors",
+     ~w(foreground foreground_soft foreground_softer foreground_softest border_base)},
+    {"Status Colors", ~w(danger success warning info)}
+  ]
 
-  @dark_status %{
-    danger: "#ef4444",
-    success: "#22c55e",
-    warning: "#f59e0b"
+  @labels %{
+    "primary" => "Primary",
+    "primary_soft" => "Primary Soft",
+    "foreground_primary" => "Primary Text",
+    "background_base" => "Background",
+    "background_accent" => "Background Accent",
+    "background_input" => "Input Background",
+    "surface" => "Surface",
+    "overlay" => "Overlay",
+    "foreground" => "Text",
+    "foreground_soft" => "Text Soft",
+    "foreground_softer" => "Text Softer",
+    "foreground_softest" => "Text Softest",
+    "border_base" => "Border",
+    "danger" => "Danger",
+    "success" => "Success",
+    "warning" => "Warning",
+    "info" => "Info"
   }
 
   @light_themes [
     %{
-      id: "coral",
-      name: "Coral",
-      description: "Lantern's default warm accent on clean zinc surfaces.",
-      tokens:
-        Map.merge(@light_status, %{
-          accent: "oklch(0.637 0.192 38)",
-          accent_fg: "#ffffff",
-          fg: "#09090b",
-          fg_muted: "#71717a",
-          fg_subtle: "#a1a1aa",
-          surface: "#ffffff",
-          surface_raised: "#ffffff",
-          surface_sunken: "#f4f4f5",
-          surface_hover: "#f4f4f5",
-          border: "#e4e4e7",
-          border_strong: "#d4d4d8"
-        })
+      id: "flicker",
+      name: "Flicker",
+      desc: "Coral on warm off-white — lantern's default.",
+      tokens: %{
+        "primary" => "#d1521e",
+        "primary_soft" => "#fbeee6",
+        "foreground_primary" => "#fffdfb",
+        "background_base" => "#fdfcfa",
+        "background_accent" => "#f4f1ec",
+        "background_input" => "#fffefc",
+        "surface" => "#fffefc",
+        "overlay" => "#fffefc",
+        "foreground" => "#3a3630",
+        "foreground_soft" => "#5c554c",
+        "foreground_softer" => "#837a6e",
+        "foreground_softest" => "#a89e90",
+        "border_base" => "#e7e2da",
+        "danger" => "#d0342c",
+        "success" => "#2f9e5f",
+        "warning" => "#d99a2b",
+        "info" => "#3b7dd8"
+      }
     },
     %{
       id: "ocean",
       name: "Ocean",
-      description: "A blue accent with cool, slate-tinted surfaces.",
-      tokens:
-        Map.merge(@light_status, %{
-          accent: "#2563eb",
-          accent_fg: "#ffffff",
-          fg: "#0f172a",
-          fg_muted: "#64748b",
-          fg_subtle: "#94a3b8",
-          surface: "#f8fafc",
-          surface_raised: "#ffffff",
-          surface_sunken: "#f1f5f9",
-          surface_hover: "#e2e8f0",
-          border: "#cbd5e1",
-          border_strong: "#94a3b8"
-        })
-    },
-    %{
-      id: "forest",
-      name: "Forest",
-      description: "Green emphasis over soft warm-neutral surfaces.",
-      tokens:
-        Map.merge(@light_status, %{
-          accent: "#15803d",
-          accent_fg: "#ffffff",
-          fg: "#1f2933",
-          fg_muted: "#6b665f",
-          fg_subtle: "#9a9186",
-          surface: "#fffdfa",
-          surface_raised: "#ffffff",
-          surface_sunken: "#f4f1ea",
-          surface_hover: "#eee9df",
-          border: "#ded8cb",
-          border_strong: "#c9bdad"
-        })
-    },
-    %{
-      id: "plum",
-      name: "Plum",
-      description: "Violet controls with pale lavender surfaces.",
-      tokens:
-        Map.merge(@light_status, %{
-          accent: "#6d28d9",
-          accent_fg: "#ffffff",
-          fg: "#18151f",
-          fg_muted: "#6d6478",
-          fg_subtle: "#9b8faa",
-          surface: "#fbfaff",
-          surface_raised: "#ffffff",
-          surface_sunken: "#f5f3ff",
-          surface_hover: "#ede9fe",
-          border: "#ddd6fe",
-          border_strong: "#c4b5fd"
-        })
+      desc: "Blue accent on cool slate-tinted surfaces.",
+      tokens: %{
+        "primary" => "#2563eb",
+        "primary_soft" => "#e6eefc",
+        "foreground_primary" => "#ffffff",
+        "background_base" => "#fbfcfe",
+        "background_accent" => "#eef2f8",
+        "background_input" => "#ffffff",
+        "surface" => "#ffffff",
+        "overlay" => "#ffffff",
+        "foreground" => "#1e293b",
+        "foreground_soft" => "#475569",
+        "foreground_softer" => "#64748b",
+        "foreground_softest" => "#94a3b8",
+        "border_base" => "#e2e8f0",
+        "danger" => "#dc2626",
+        "success" => "#16a34a",
+        "warning" => "#d97706",
+        "info" => "#2563eb"
+      }
     },
     %{
       id: "paper",
       name: "Paper",
-      description: "Amber accents on warm off-white paper surfaces.",
-      tokens:
-        Map.merge(@light_status, %{
-          accent: "#92400e",
-          accent_fg: "#ffffff",
-          fg: "#1c1917",
-          fg_muted: "#78716c",
-          fg_subtle: "#a8a29e",
-          surface: "#faf9f7",
-          surface_raised: "#fffefd",
-          surface_sunken: "#f1eee9",
-          surface_hover: "#ebe6df",
-          border: "#e7e5e4",
-          border_strong: "#d6d3d1"
-        })
+      desc: "Amber accent on warm paper surfaces.",
+      tokens: %{
+        "primary" => "#b45309",
+        "primary_soft" => "#f7ecd9",
+        "foreground_primary" => "#fffbf2",
+        "background_base" => "#faf7f0",
+        "background_accent" => "#f0e9dc",
+        "background_input" => "#fffdf8",
+        "surface" => "#fffdf8",
+        "overlay" => "#fffdf8",
+        "foreground" => "#3f3a2f",
+        "foreground_soft" => "#635b49",
+        "foreground_softer" => "#8a7f66",
+        "foreground_softest" => "#b0a488",
+        "border_base" => "#e8dfcc",
+        "danger" => "#c0392b",
+        "success" => "#3d8b52",
+        "warning" => "#c07c1a",
+        "info" => "#3f6f9c"
+      }
     }
   ]
 
   @dark_themes [
     %{
-      id: "coral-dark",
-      name: "Coral Dark",
-      description: "Lantern's default dark mode with ember focus.",
-      tokens:
-        Map.merge(@dark_status, %{
-          accent: "oklch(0.685 0.182 39)",
-          accent_fg: "#ffffff",
-          fg: "#fafafa",
-          fg_muted: "#a1a1aa",
-          fg_subtle: "#71717a",
-          surface: "#09090b",
-          surface_raised: "#0c0c0e",
-          surface_sunken: "#18181b",
-          surface_hover: "#26262a",
-          border: "#26262a",
-          border_strong: "#3f3f46"
-        })
+      id: "flicker-dark",
+      name: "Flicker Dark",
+      desc: "Ember coral over warm near-black.",
+      tokens: %{
+        "primary" => "#e8623a",
+        "primary_soft" => "#3a241a",
+        "foreground_primary" => "#fffdfb",
+        "background_base" => "#1a1613",
+        "background_accent" => "#2a231e",
+        "background_input" => "#201b17",
+        "surface" => "#221c18",
+        "overlay" => "#26201b",
+        "foreground" => "#f2ede7",
+        "foreground_soft" => "#cec6bc",
+        "foreground_softer" => "#a49a8e",
+        "foreground_softest" => "#7d7367",
+        "border_base" => "#3a322b",
+        "danger" => "#ef5350",
+        "success" => "#4caf7f",
+        "warning" => "#e0a92e",
+        "info" => "#5b9bd5"
+      }
     },
     %{
       id: "midnight",
       name: "Midnight",
-      description: "Blue accents over blue-black application chrome.",
-      tokens:
-        Map.merge(@dark_status, %{
-          accent: "#60a5fa",
-          accent_fg: "#07111f",
-          fg: "#f8fafc",
-          fg_muted: "#a9b4c8",
-          fg_subtle: "#64748b",
-          surface: "#0b1020",
-          surface_raised: "#111730",
-          surface_sunken: "#080d19",
-          surface_hover: "#1a2440",
-          border: "#24304a",
-          border_strong: "#33415f"
-        })
-    },
-    %{
-      id: "forest-dark",
-      name: "Forest Dark",
-      description: "A green signal theme on deep moss surfaces.",
-      tokens:
-        Map.merge(@dark_status, %{
-          accent: "#4ade80",
-          accent_fg: "#052e16",
-          fg: "#f3fbf5",
-          fg_muted: "#a8b8aa",
-          fg_subtle: "#728074",
-          surface: "#0b130d",
-          surface_raised: "#101b13",
-          surface_sunken: "#071009",
-          surface_hover: "#1c2b20",
-          border: "#26382c",
-          border_strong: "#3b5243"
-        })
-    },
-    %{
-      id: "plum-dark",
-      name: "Plum Dark",
-      description: "A violet accent over saturated night surfaces.",
-      tokens:
-        Map.merge(@dark_status, %{
-          accent: "#c084fc",
-          accent_fg: "#2e1065",
-          fg: "#fbf7ff",
-          fg_muted: "#c4b5d4",
-          fg_subtle: "#8b7aa3",
-          surface: "#120d1f",
-          surface_raised: "#191129",
-          surface_sunken: "#0d0918",
-          surface_hover: "#26193b",
-          border: "#35224f",
-          border_strong: "#4c3570"
-        })
+      desc: "Blue accent over blue-black chrome.",
+      tokens: %{
+        "primary" => "#5b9bf5",
+        "primary_soft" => "#1b2a44",
+        "foreground_primary" => "#0b1020",
+        "background_base" => "#0b1020",
+        "background_accent" => "#161f36",
+        "background_input" => "#111730",
+        "surface" => "#141b30",
+        "overlay" => "#182035",
+        "foreground" => "#e8edf7",
+        "foreground_soft" => "#c0cade",
+        "foreground_softer" => "#8f9cb8",
+        "foreground_softest" => "#697392",
+        "border_base" => "#26304a",
+        "danger" => "#f26161",
+        "success" => "#43c07f",
+        "warning" => "#e6b23e",
+        "info" => "#5b9bf5"
+      }
     },
     %{
       id: "slate",
       name: "Slate",
-      description: "Neutral contrast with a cool slate accent.",
-      tokens:
-        Map.merge(@dark_status, %{
-          accent: "#94a3b8",
-          accent_fg: "#0f172a",
-          fg: "#f8fafc",
-          fg_muted: "#a1a8b3",
-          fg_subtle: "#6b7280",
-          surface: "#0f1117",
-          surface_raised: "#151821",
-          surface_sunken: "#0a0d12",
-          surface_hover: "#20242e",
-          border: "#2b303b",
-          border_strong: "#475569"
-        })
+      desc: "Neutral cool-slate accent on dark.",
+      tokens: %{
+        "primary" => "#94a3b8",
+        "primary_soft" => "#242a33",
+        "foreground_primary" => "#0f141a",
+        "background_base" => "#0f141a",
+        "background_accent" => "#1c232c",
+        "background_input" => "#151b22",
+        "surface" => "#191f27",
+        "overlay" => "#1d242d",
+        "foreground" => "#e6eaef",
+        "foreground_soft" => "#c2c9d2",
+        "foreground_softer" => "#939fac",
+        "foreground_softest" => "#6b7682",
+        "border_base" => "#2a323c",
+        "danger" => "#ef5350",
+        "success" => "#4caf7f",
+        "warning" => "#e0a92e",
+        "info" => "#7d94b0"
+      }
     }
   ]
 
-  @theme_presets Map.new(
-                   Enum.map(@light_themes, &{"light:#{&1.id}", &1.tokens}) ++
-                     Enum.map(@dark_themes, &{"dark:#{&1.id}", &1.tokens})
-                 )
-
-  @token_rows [
-    %{key: "accent", label: "Accent"},
-    %{key: "accent_fg", label: "Accent foreground"},
-    %{key: "fg", label: "Foreground"},
-    %{key: "fg_muted", label: "Muted foreground"},
-    %{key: "fg_subtle", label: "Subtle foreground"},
-    %{key: "surface", label: "Surface"},
-    %{key: "surface_raised", label: "Raised surface"},
-    %{key: "surface_sunken", label: "Sunken surface"},
-    %{key: "surface_hover", label: "Hover surface"},
-    %{key: "border", label: "Border"},
-    %{key: "border_strong", label: "Strong border"},
-    %{key: "danger", label: "Danger"},
-    %{key: "success", label: "Success"},
-    %{key: "warning", label: "Warning"}
-  ]
-
-  @radius_options [
-    {"None", "0rem"},
-    {"Small", "0.375rem"},
-    {"Default", "0.5rem"},
-    {"Large", "0.75rem"},
-    {"Round", "1rem"}
-  ]
-
-  @density_options [
-    {"Compact", "compact"},
-    {"Comfortable", "comfortable"}
-  ]
-
-  @font_options [
-    {"System", ~s("Inter", ui-sans-serif, system-ui, sans-serif),
-     "The demo's current body stack."},
-    {"Grotesque", ~s("Space Grotesk", "Inter", system-ui, sans-serif),
-     "A tighter display voice for app chrome and controls."},
-    {"Serif", ~s("Iowan Old Style", Georgia, serif),
-     "A warmer editorial stack for text-heavy surfaces."}
-  ]
-
-  @defaults %{
-    light: List.first(@light_themes).tokens,
-    dark: List.first(@dark_themes).tokens,
-    radius: "0.5rem",
-    density: "compact",
-    font: ~s("Inter", ui-sans-serif, system-ui, sans-serif)
-  }
+  def groups, do: @groups
+  def light_themes, do: @light_themes
+  def dark_themes, do: @dark_themes
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "Theming - lantern-ui")}
+    {:ok,
+     socket
+     |> assign(:page_title, "Theming - lantern-ui")
+     |> assign(:active_light, "flicker")
+     |> assign(:active_dark, "flicker-dark")
+     |> assign(:editing, nil)
+     |> assign(:groups, @groups)
+     |> assign(:labels, @labels)
+     |> assign(:light_themes, @light_themes)
+     |> assign(:dark_themes, @dark_themes)
+     |> assign(:edited, %{})}
+  end
+
+  # Restore persisted active themes (pushed by the DemoTheming hook on mount).
+  def handle_event("restore", %{"light" => l, "dark" => d}, socket) do
+    socket = if theme(l), do: assign(socket, :active_light, l), else: socket
+    socket = if theme(d), do: assign(socket, :active_dark, d), else: socket
+    {:noreply, apply_active(socket)}
+  end
+
+  def handle_event("restore", _params, socket), do: {:noreply, apply_active(socket)}
+
+  def handle_event("set_active", params, socket) do
+    socket =
+      case params["_target"] do
+        ["light"] -> assign(socket, :active_light, params["light"])
+        ["dark"] -> assign(socket, :active_dark, params["dark"])
+        _ -> socket
+      end
+
+    {:noreply, apply_active(socket)}
+  end
+
+  def handle_event("edit", %{"id" => id}, socket) do
+    {:noreply, assign(socket, :editing, theme(id))}
+  end
+
+  def handle_event("edit_token", %{"_target" => [key]} = params, socket)
+      when is_map_key(params, key) do
+    editing = put_in(socket.assigns.editing, [:tokens, key], params[key])
+    {:noreply, assign(socket, :editing, editing)}
+  end
+
+  def handle_event("edit_token", _params, socket), do: {:noreply, socket}
+
+  def handle_event("apply_edits", _params, socket) do
+    %{editing: editing} = socket.assigns
+    mode = if editing.id in Enum.map(@dark_themes, & &1.id), do: "dark", else: "light"
+
+    {:noreply,
+     socket
+     |> put_edited(editing)
+     |> set_active_edited(mode, editing.id)
+     |> apply_active()
+     |> push_event("lantern:dialog:close", %{id: "theme-editor"})}
+  end
+
+  def handle_event("reset", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:active_light, "flicker")
+     |> assign(:active_dark, "flicker-dark")
+     |> assign(:edited, %{})
+     |> apply_active()}
+  end
+
+  # ── helpers ──
+
+  defp theme(id), do: Enum.find(@light_themes ++ @dark_themes, &(&1.id == id))
+
+  defp all_themes(socket) do
+    edited = Map.get(socket.assigns, :edited, %{})
+    Enum.map(@light_themes ++ @dark_themes, fn t -> Map.get(edited, t.id, t) end)
+  end
+
+  defp resolved(socket, id) do
+    Enum.find(all_themes(socket), &(&1.id == id)) || theme(id)
+  end
+
+  defp put_edited(socket, theme) do
+    edited = Map.put(Map.get(socket.assigns, :edited, %{}), theme.id, theme)
+    assign(socket, :edited, edited)
+  end
+
+  defp set_active_edited(socket, "dark", id), do: assign(socket, :active_dark, id)
+  defp set_active_edited(socket, _light, id), do: assign(socket, :active_light, id)
+
+  # Inject the active light + dark themes as Fluxon-named CSS vars, and persist.
+  defp apply_active(socket) do
+    light = resolved(socket, socket.assigns.active_light)
+    dark = resolved(socket, socket.assigns.active_dark)
+
+    css =
+      ":root, .light {\n#{tokens_css(light.tokens)}\n}\n" <>
+        ".dark {\n#{tokens_css(dark.tokens)}\n}\n" <>
+        "@media (prefers-color-scheme: dark) { :root:not(.light) {\n#{tokens_css(dark.tokens)}\n} }"
+
+    socket
+    |> push_event("demo:inject-theme", %{css: css})
+    |> push_event("demo:persist-theme", %{
+      light: socket.assigns.active_light,
+      dark: socket.assigns.active_dark
+    })
+  end
+
+  defp tokens_css(tokens) do
+    tokens
+    |> Enum.map(fn {k, v} -> "  --#{String.replace(k, "_", "-")}: #{v};" end)
+    |> Enum.join("\n")
   end
 
   def render(assigns) do
-    assigns =
-      assign(assigns,
-        defaults: @defaults,
-        defaults_json: Jason.encode!(@defaults),
-        presets_json: Jason.encode!(@theme_presets),
-        light_themes: @light_themes,
-        dark_themes: @dark_themes,
-        token_rows: @token_rows,
-        radius_options: @radius_options,
-        density_options: @density_options,
-        font_options: @font_options
-      )
+    assigns = assign(assigns, :resolved_themes, resolved_all(assigns))
 
     ~H"""
     <LanternDemoWeb.DocsShell.shell current="theming" theme="system" density="compact">
-      <article
-        id="theming-page"
-        phx-hook="DemoTheming"
-        data-defaults={@defaults_json}
-        data-presets={@presets_json}
-        class="docs-body docs-body-wide"
-      >
-        <h1>Theming</h1>
-        <p>Runtime token overrides, persisted locally.</p>
-
-        <section class="docs-section">
-          <h2 class="docs-section-title">Theme</h2>
-          <p class="docs-section-desc">
-            Choose a complete semantic color theme independently for light and dark mode.
+      <div id="theming-root" phx-hook="DemoTheming">
+        <article class="docs-body docs-body-wide">
+          <h1>Theming</h1>
+          <p>
+            Named themes per mode, edited in a slide-over with a live preview — modeled on
+            flicker's branding panel. Themes are defined in the Fluxon token vocabulary, so a
+            theme built here drops straight into flicker (and re-skins every lantern component).
           </p>
-          <div class="docs-demo">
-            <div class="docs-theme-grid">
-              <.theme_column title="Light themes" mode="light" themes={@light_themes} />
-              <.theme_column title="Dark themes" mode="dark" themes={@dark_themes} />
+
+          <section class="docs-section">
+            <form class="th-active" phx-change="set_active">
+              <div class="th-field">
+                <label for="active-light-select" class="th-field-label">Light mode theme</label>
+                <div class="lui-select-native-wrap">
+                  <select id="active-light-select" class="lui-select-native" name="light">
+                    <option :for={t <- @light_themes} value={t.id} selected={t.id == @active_light}>
+                      {t.name}
+                    </option>
+                  </select>
+                  <Icon.icon name="chevron-up-down" class="lui-select-caret" />
+                </div>
+              </div>
+              <div class="th-field">
+                <label for="active-dark-select" class="th-field-label">Dark mode theme</label>
+                <div class="lui-select-native-wrap">
+                  <select id="active-dark-select" class="lui-select-native" name="dark">
+                    <option :for={t <- @dark_themes} value={t.id} selected={t.id == @active_dark}>
+                      {t.name}
+                    </option>
+                  </select>
+                  <Icon.icon name="chevron-up-down" class="lui-select-caret" />
+                </div>
+              </div>
+              <Button.button variant="ghost" size="sm" type="button" phx-click="reset">
+                <Icon.icon name="arrow-path" /> Reset
+              </Button.button>
+            </form>
+          </section>
+
+          <section class="docs-section">
+            <h2 class="docs-section-title">Available themes</h2>
+            <p class="docs-section-desc">Click a theme to edit its tokens and preview live.</p>
+            <div class="th-cards">
+              <button
+                :for={t <- @resolved_themes}
+                type="button"
+                class={["th-card", (t.id in [@active_light, @active_dark]) && "th-card-active"]}
+                phx-click="edit"
+                phx-value-id={t.id}
+              >
+                <span class="th-swatches">
+                  <span
+                    :for={k <- ~w(primary background_base surface foreground border_base)}
+                    class="th-swatch"
+                    style={"background: #{t.tokens[k]}"}
+                  >
+                  </span>
+                </span>
+                <span class="th-card-meta">
+                  <span class="th-card-name">{t.name}</span>
+                  <span class="th-card-desc">{t.desc}</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        </article>
+
+        <Sheet.sheet
+          :if={@editing}
+          id="theme-editor"
+          placement="right"
+          open
+          title={"Edit · #{@editing.name}"}
+        >
+          <div class="th-preview" style={preview_style(@editing.tokens)}>
+            <div class="th-preview-label">Preview</div>
+            <div class="th-prow">
+              <span class="th-btn-primary" style={btn_primary_style(@editing.tokens)}>Primary</span>
+              <span class="th-btn-secondary" style={btn_secondary_style(@editing.tokens)}>
+                Secondary
+              </span>
+            </div>
+            <div class="th-prow">
+              <span class="th-pill" style={pill_style(@editing.tokens, "success")}>success</span>
+              <span class="th-pill" style={pill_style(@editing.tokens, "danger")}>danger</span>
+              <span class="th-pill" style={pill_style(@editing.tokens, "warning")}>warning</span>
+              <span class="th-pill" style={pill_style(@editing.tokens, "info")}>info</span>
+            </div>
+            <input
+              class="th-input"
+              style={input_style(@editing.tokens)}
+              placeholder="Input field"
+              readonly
+            />
+            <div style={"color: #{@editing.tokens["foreground"]}; font-weight:600;"}>Primary text</div>
+            <div style={"color: #{@editing.tokens["foreground_soft"]}; font-size:.85rem;"}>
+              Secondary text
+            </div>
+            <div style={"color: #{@editing.tokens["foreground_softer"]}; font-size:.78rem;"}>
+              Softer text
             </div>
           </div>
-        </section>
 
-        <section class="docs-section">
-          <details class="docs-customize">
-            <summary>Customize tokens</summary>
-            <div class="docs-demo docs-customize-body">
-              <Tabs.tabs id="theme-token-tabs" data-theme-mode-tabs>
-                <Tabs.tabs_list active_tab="light" size="sm">
-                  <:tab name="light">Light</:tab>
-                  <:tab name="dark">Dark</:tab>
-                </Tabs.tabs_list>
-              </Tabs.tabs>
-
-              <.token_editor mode="light" rows={@token_rows} hidden={false} />
-              <.token_editor mode="dark" rows={@token_rows} hidden={true} />
+          <form phx-change="edit_token" class="th-groups">
+            <div :for={{group, keys} <- @groups} class="th-group">
+            <h4 class="th-group-title">{group}</h4>
+            <div class="th-tokens">
+              <label :for={key <- keys} class="th-token">
+                <span class="th-token-swatch" style={"background: #{@editing.tokens[key]}"}></span>
+                <span class="th-token-label">{@labels[key]}</span>
+                <input
+                  type="color"
+                  class="th-color"
+                  value={@editing.tokens[key]}
+                  phx-change="edit_token"
+                  name={key}
+                />
+              </label>
             </div>
-          </details>
-        </section>
+            </div>
+          </form>
 
-        <section class="docs-section">
-          <h2 id="font-title" class="docs-section-title">Font</h2>
-          <p class="docs-section-desc">Set the shared Lantern body font token.</p>
-          <div class="docs-demo">
-            <Radio.radio
-              id="theme-font"
-              name="theme_font"
-              value={@defaults.font}
-              variant="cards"
-              aria-labelledby="font-title"
-              data-theme-key="font"
+          <:footer>
+            <Button.button variant="outline" size="sm" phx-click={LanternUI.close_dialog("theme-editor")}>
+              Cancel
+            </Button.button>
+            <Button.button
+              variant="solid"
+              size="sm"
+              phx-click="apply_edits"
+              phx-click-away={LanternUI.close_dialog("theme-editor")}
             >
-              <:radio
-                :for={{label, value, description} <- @font_options}
-                value={value}
-                label={label}
-                description={description}
-              />
-            </Radio.radio>
-          </div>
-        </section>
+              Apply
+            </Button.button>
+          </:footer>
+        </Sheet.sheet>
+      </div>
 
-        <section class="docs-section">
-          <h2 id="radius-title" class="docs-section-title">Radius</h2>
-          <p class="docs-section-desc">Adjust the shared radius token used by Lantern controls.</p>
-          <div class="docs-demo">
-            <Radio.radio
-              id="theme-radius"
-              name="theme_radius"
-              value="0.5rem"
-              variant="cards"
-              aria-labelledby="radius-title"
-              data-theme-key="radius"
-            >
-              <:radio
-                :for={{label, value} <- @radius_options}
-                value={value}
-                label={label}
-                description={value}
-              />
-            </Radio.radio>
-          </div>
-        </section>
-
-        <section class="docs-section">
-          <h2 id="density-title" class="docs-section-title">Density</h2>
-          <p class="docs-section-desc">Switch between the compact demo scale and roomier controls.</p>
-          <div class="docs-demo">
-            <Radio.radio
-              id="theme-density"
-              name="theme_density"
-              value="compact"
-              variant="cards"
-              aria-labelledby="density-title"
-              data-theme-key="density"
-            >
-              <:radio
-                :for={{label, value} <- @density_options}
-                value={value}
-                label={label}
-                description={density_description(value)}
-              />
-            </Radio.radio>
-          </div>
-        </section>
-
-        <section class="docs-section">
-          <h2 class="docs-section-title">Preview</h2>
-          <p class="docs-section-desc">
-            The light and dark panes are scoped theme previews, so both mode choices are visible.
-          </p>
-          <div class="docs-preview-grid">
-            <.preview_cluster tone="light" label="Light" prefix="preview-light" />
-            <.preview_cluster tone="dark" label="Dark" prefix="preview-dark" />
-          </div>
-        </section>
-
-        <div class="docs-actions-row">
-          <Button.button variant="outline" data-theme-reset>
-            Reset to defaults
-          </Button.button>
-        </div>
-
-        <style>
-          .docs-body { max-width: 980px; }
-          .docs-body h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: 0; margin: 0 0 .4rem; }
-          .docs-body > p { font-size: .875rem; color: var(--lantern-fg-muted); margin: 0 0 1.25rem; line-height: 1.6; }
-          .docs-section { margin-top: 2.25rem; }
-          .docs-section-title { font-size: 1.05rem; font-weight: 650; letter-spacing: 0; margin: 0 0 .25rem; color: var(--lantern-fg); }
-          .docs-section-desc { font-size: .85rem; color: var(--lantern-fg-muted); margin: 0 0 .9rem; }
-          .docs-demo { border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-lg); padding: 1.25rem; background: var(--lantern-surface-raised); display: flex; flex-direction: column; gap: .875rem; }
-          .docs-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-          .docs-theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-          .docs-theme-column { min-width: 0; }
-          .docs-theme-heading { margin: 0 0 .65rem; color: var(--lantern-fg); font-size: .9rem; font-weight: 650; }
-          .docs-theme-stack { display: grid; gap: .625rem; }
-          .docs-theme-card { width: 100%; min-height: 5.5rem; display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: .85rem; align-items: stretch; padding: .65rem; text-align: left; color: var(--lantern-fg); background: var(--theme-surface); border: 1px solid var(--theme-border); border-radius: var(--lantern-radius-md); cursor: pointer; box-shadow: var(--lantern-shadow); transition: border-color var(--lantern-duration) var(--lantern-ease), box-shadow var(--lantern-duration) var(--lantern-ease), transform var(--lantern-duration) var(--lantern-ease); }
-          .docs-theme-card:hover { transform: translateY(-1px); border-color: var(--theme-accent); }
-          .docs-theme-card-selected { box-shadow: 0 0 0 2px var(--lantern-surface), 0 0 0 5px var(--lantern-ring), var(--lantern-shadow-md); }
-          .docs-theme-swatches { display: grid; grid-template-columns: repeat(2, 1fr); gap: .25rem; border-radius: calc(var(--lantern-radius-md) - 2px); overflow: hidden; border: 1px solid var(--theme-border); background: var(--theme-surface); }
-          .docs-theme-swatch { min-height: 1.8rem; }
-          .docs-theme-copy { min-width: 0; align-self: center; }
-          .docs-theme-copy strong { display: block; color: var(--theme-fg); font-size: .88rem; line-height: 1.25; }
-          .docs-theme-copy span { display: block; margin-top: .25rem; color: color-mix(in oklab, var(--theme-fg) 68%, var(--theme-surface)); font-size: .75rem; line-height: 1.35; }
-          .docs-customize { margin-top: 2.25rem; }
-          .docs-customize summary { color: var(--lantern-fg); cursor: pointer; font-size: 1.05rem; font-weight: 650; letter-spacing: 0; }
-          .docs-customize-body { margin-top: .9rem; }
-          .docs-token-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem .8rem; }
-          .docs-token-row { display: grid; grid-template-columns: minmax(7rem, 1fr) auto minmax(4.75rem, auto); gap: .65rem; align-items: center; padding: .55rem .65rem; border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-md); background: var(--lantern-surface); }
-          .docs-token-label { color: var(--lantern-fg); font-size: .8rem; font-weight: 560; line-height: 1.25; }
-          .docs-token-color { width: 2.1rem; height: 2.1rem; padding: 0; border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-sm); background: transparent; cursor: pointer; }
-          .docs-token-value { color: var(--lantern-fg-muted); font-family: var(--lantern-font-mono); font-size: .7rem; justify-self: end; }
-          .docs-preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
-          .docs-preview-pane { border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-lg); padding: 1.25rem; background: var(--lantern-surface-raised); color: var(--lantern-fg); display: flex; flex-direction: column; gap: .875rem; }
-          .docs-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-          .docs-preview-head strong { font-size: .9rem; }
-          .docs-control-stack { display: grid; gap: .75rem; }
-          .docs-actions-row { margin-top: 2rem; display: flex; justify-content: flex-start; }
-
-          @media (max-width: 760px) {
-            .docs-theme-grid,
-            .docs-token-grid { grid-template-columns: 1fr; }
-          }
-        </style>
-      </article>
+      <style>
+        .th-active { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+        .th-field { display: flex; flex-direction: column; gap: 0.25rem; min-width: 12rem; }
+        .th-field-label { font-size: var(--lantern-text-sm); font-weight: 550; color: var(--lantern-fg); }
+        .th-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; }
+        .th-card { display: flex; align-items: center; gap: 0.7rem; text-align: left; padding: 0.7rem;
+          background: var(--lantern-surface-raised); border: 1px solid var(--lantern-border);
+          border-radius: var(--lantern-radius-lg); cursor: pointer; font-family: inherit; }
+        .th-card:hover { background: var(--lantern-surface-hover); }
+        .th-card-active { border-color: var(--lantern-accent); box-shadow: 0 0 0 1px var(--lantern-accent); }
+        .th-swatches { display: inline-flex; border-radius: var(--lantern-radius-sm); overflow: hidden;
+          border: 1px solid var(--lantern-border); flex-shrink: 0; }
+        .th-swatch { width: 1rem; height: 2.2rem; display: block; }
+        .th-card-meta { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+        .th-card-name { font-weight: 600; font-size: 0.85rem; color: var(--lantern-fg); }
+        .th-card-desc { font-size: 0.72rem; color: var(--lantern-fg-muted); }
+        .th-preview { border: 1px solid; border-radius: var(--lantern-radius-lg); padding: 0.9rem;
+          margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.55rem; }
+        .th-preview-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;
+          opacity: 0.6; }
+        .th-prow { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+        .th-btn-primary, .th-btn-secondary { padding: 0.3rem 0.7rem; border-radius: 0.4rem;
+          font-size: 0.8rem; font-weight: 600; }
+        .th-btn-secondary { border: 1px solid; }
+        .th-pill { padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+        .th-input { padding: 0.35rem 0.5rem; border-radius: 0.4rem; border: 1px solid; font-size: 0.8rem; }
+        .th-group { margin-bottom: 1.1rem; }
+        .th-group-title { font-size: 0.8rem; font-weight: 650; color: var(--lantern-fg); margin: 0 0 0.5rem; }
+        .th-tokens { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        .th-token { display: flex; align-items: center; gap: 0.45rem; font-size: 0.76rem;
+          color: var(--lantern-fg-muted); cursor: pointer; }
+        .th-token-swatch { width: 0.9rem; height: 0.9rem; border-radius: 3px;
+          border: 1px solid var(--lantern-border); flex-shrink: 0; }
+        .th-token-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .th-color { width: 1.6rem; height: 1.4rem; padding: 0; border: 1px solid var(--lantern-border);
+          border-radius: 4px; background: none; cursor: pointer; flex-shrink: 0; }
+      </style>
     </LanternDemoWeb.DocsShell.shell>
     """
   end
 
-  attr(:title, :string, required: true)
-  attr(:mode, :string, required: true)
-  attr(:themes, :list, required: true)
-
-  defp theme_column(assigns) do
-    ~H"""
-    <div class="docs-theme-column">
-      <h3 class="docs-theme-heading">{@title}</h3>
-      <div class="docs-theme-stack">
-        <button
-          :for={theme <- @themes}
-          type="button"
-          class="docs-theme-card"
-          style={preset_style(theme.tokens)}
-          aria-pressed="false"
-          data-theme-preset={"#{@mode}:#{theme.id}"}
-        >
-          <span class="docs-theme-swatches" aria-hidden="true">
-            <span class="docs-theme-swatch" style={"background: #{theme.tokens.accent};"}></span>
-            <span class="docs-theme-swatch" style={"background: #{theme.tokens.surface};"}></span>
-            <span class="docs-theme-swatch" style={"background: #{theme.tokens.surface_sunken};"}></span>
-            <span class="docs-theme-swatch" style={"background: #{theme.tokens.fg};"}></span>
-          </span>
-          <span class="docs-theme-copy">
-            <strong>{theme.name}</strong>
-            <span>{theme.description}</span>
-          </span>
-        </button>
-      </div>
-    </div>
-    """
+  defp resolved_all(assigns) do
+    edited = Map.get(assigns, :edited, %{})
+    Enum.map(@light_themes ++ @dark_themes, fn t -> Map.get(edited, t.id, t) end)
   end
 
-  attr(:mode, :string, required: true)
-  attr(:rows, :list, required: true)
-  attr(:hidden, :boolean, default: false)
+  defp preview_style(t),
+    do: "background: #{t["background_base"]}; border-color: #{t["border_base"]};"
 
-  defp token_editor(assigns) do
-    ~H"""
-    <div data-theme-token-panel={@mode} hidden={@hidden}>
-      <div class="docs-token-grid">
-        <label :for={row <- @rows} class="docs-token-row">
-          <span class="docs-token-label">{row.label}</span>
-          <input
-            type="color"
-            value="#000000"
-            class="docs-token-color"
-            data-theme-mode={@mode}
-            data-theme-token={row.key}
-            aria-label={"#{@mode} #{row.label}"}
-          />
-          <span class="docs-token-value" data-theme-mode={@mode} data-theme-token-value={row.key}>
-            #000000
-          </span>
-        </label>
-      </div>
-    </div>
-    """
+  defp btn_primary_style(t),
+    do: "background: #{t["primary"]}; color: #{t["foreground_primary"]};"
+
+  defp btn_secondary_style(t),
+    do:
+      "background: #{t["surface"]}; color: #{t["foreground"]}; border-color: #{t["border_base"]};"
+
+  defp pill_style(t, key) do
+    "background: color-mix(in oklab, #{t[key]} 15%, transparent); color: #{t[key]};"
   end
 
-  attr(:tone, :string, required: true)
-  attr(:label, :string, required: true)
-  attr(:prefix, :string, required: true)
-
-  defp preview_cluster(assigns) do
-    ~H"""
-    <div class={["docs-preview-pane", @tone]} data-theme-preview={@tone}>
-      <div class="docs-preview-head">
-        <strong>{@label}</strong>
-        <Badge.badge color="accent">Accent</Badge.badge>
-      </div>
-
-      <div class="docs-row">
-        <Button.button variant="solid">Solid</Button.button>
-        <Button.button variant="soft">Soft</Button.button>
-        <Button.button variant="outline">Outline</Button.button>
-      </div>
-
-      <div class="docs-row">
-        <Badge.badge color="primary" variant="solid">Primary</Badge.badge>
-        <Badge.badge color="accent">Accent</Badge.badge>
-        <Badge.badge color="success">Live</Badge.badge>
-      </div>
-
-      <div class="docs-control-stack">
-        <Checkbox.checkbox
-          id={"#{@prefix}-checkbox"}
-          name={"#{@prefix}_checkbox"}
-          checked
-          label="Selected option"
-          description="Uses the current control density."
-        />
-        <Switch.switch
-          id={"#{@prefix}-switch"}
-          name={"#{@prefix}_switch"}
-          checked
-          label="Enabled"
-        />
-        <Select.select
-          id={"#{@prefix}-select"}
-          name={"#{@prefix}_select"}
-          value="active"
-          options={[{"Active", "active"}, {"Paused", "paused"}, {"Queued", "queued"}]}
-          label="Status"
-        />
-      </div>
-
-      <Alert.alert color="info" title="Theme applied">
-        This preview reads the same runtime Lantern tokens as the rest of the demo.
-      </Alert.alert>
-    </div>
-    """
-  end
-
-  defp density_description("compact"), do: "Dense demo controls"
-  defp density_description("comfortable"), do: "Roomier controls"
-
-  defp preset_style(tokens) do
-    [
-      "--theme-accent: #{tokens.accent}",
-      "--theme-border: #{tokens.border}",
-      "--theme-fg: #{tokens.fg}",
-      "--theme-surface: #{tokens.surface}"
-    ]
-    |> Enum.join("; ")
-  end
+  defp input_style(t),
+    do:
+      "background: #{t["background_input"]}; color: #{t["foreground"]}; border-color: #{t["border_base"]};"
 end
