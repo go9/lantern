@@ -19,6 +19,7 @@ defmodule LanternDemoWeb.Router do
     live("/", DemoLive, :index)
     live("/components", ComponentsLive, :index)
     live("/components/data-table", DataTableDemo)
+    live("/components/theming", ThemingLive)
     live("/components/:slug", ComponentsLive, :show)
   end
 end

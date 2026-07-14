@@ -14,9 +14,11 @@ defmodule LanternDemoWeb.DocsShell do
   alias LanternUI.Components.Breadcrumb
   alias LanternUI.Components.Icon
   alias LanternUI.Components.Layout
+  alias LanternUI.Components.Theme
 
   @component_groups [
     {"Layout", [{"app-shell", "App shell"}]},
+    {"Theming", [{"theming", "Theming"}]},
     {"Data",
      [
        {"data-table", "Data table"},
@@ -105,6 +107,7 @@ defmodule LanternDemoWeb.DocsShell do
         </Layout.nav_group>
       </:sidebar>
 
+      <Theme.theme />
       {render_slot(@inner_block)}
     </Layout.app_shell>
 
@@ -124,6 +127,7 @@ defmodule LanternDemoWeb.DocsShell do
 
   @icons %{
     "app-shell" => "view-columns",
+    "theming" => "sparkles",
     "data-table" => "circle-stack",
     "table" => "bars-3",
     "pagination" => "ellipsis-horizontal",
