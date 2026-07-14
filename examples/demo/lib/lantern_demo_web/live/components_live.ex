@@ -117,6 +117,8 @@ defmodule LanternDemoWeb.ComponentsLive do
     """,
     "select" => ~S"""
     <.select field={@form[:channel]} label="Channel" options={["eBay", "Shopify"]} />
+    <.select name="tags" label="Multiple" multiple value={["a"]} options={["a", "b", "c"]} />
+    <.select name="country" label="Searchable" searchable options={@countries} />
     <.select name="size" native value={25} options={[10, 25, 50]} />
     """,
     "pagination" => ~S"""
@@ -739,6 +741,39 @@ defmodule LanternDemoWeb.ComponentsLive do
                 label="With error"
                 options={["a"]}
                 errors={["can't be blank"]}
+              />
+              <Select.select
+                id="sel-5"
+                name="tags"
+                label="Multiple"
+                multiple
+                value={["elixir", "phoenix"]}
+                options={[
+                  {"Elixir", "elixir"},
+                  {"Phoenix", "phoenix"},
+                  {"LiveView", "liveview"},
+                  {"Ecto", "ecto"}
+                ]}
+              />
+              <Select.select
+                id="sel-6"
+                name="country"
+                label="Searchable"
+                searchable
+                placeholder="Pick a country"
+                options={[
+                  "Argentina", "Australia", "Brazil", "Canada", "Denmark", "Estonia",
+                  "France", "Germany", "Iceland", "Japan", "Mexico", "Netherlands",
+                  "Norway", "Portugal", "Sweden", "United States"
+                ]}
+              />
+              <Select.select
+                id="sel-7"
+                name="team"
+                label="Multi + search"
+                multiple
+                searchable
+                options={["Ada", "Alan", "Barbara", "Donald", "Edsger", "Grace", "Ken", "Radia"]}
               />
             </div>
           </div>

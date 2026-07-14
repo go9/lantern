@@ -75,7 +75,7 @@ defmodule LanternDemoWeb.DocsShell do
     ~H"""
     <Layout.app_shell
       id="lantern-demo-shell"
-      class={@theme == "dark" && "dark"}
+      class={[@theme == "dark" && "dark", @theme == "light" && "light"]}
       data-lantern-density={@density}
     >
       <:brand>
