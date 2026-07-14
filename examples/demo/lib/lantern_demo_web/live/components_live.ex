@@ -1621,7 +1621,7 @@ defmodule LanternDemoWeb.ComponentsLive do
         <p>Tiny inline trend line — no axes, no hooks.</p>
         <div class="docs-demo">
           <div class="docs-spark-box">
-            <Charts.sparkline id="ch-spark" series={@spark} height={48} />
+            <Charts.sparkline id="ch-spark" series={[3, 5, 4, 8, 6, 9]} height={48} />
           </div>
         </div>
         <pre class="docs-code"><code>{@snippets["sparkline"]}</code></pre>
