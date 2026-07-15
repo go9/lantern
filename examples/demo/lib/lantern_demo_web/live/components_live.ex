@@ -40,6 +40,43 @@ defmodule LanternDemoWeb.ComponentsLive do
   @labels Map.new(Enum.flat_map(@groups, fn {_g, items} -> items end))
   @default_slug "button"
 
+  # slug -> the component functions whose props/slots to document (introspected)
+  @api_map %{
+    "app-shell" => [{Layout, :app_shell}, {Layout, :nav_group}, {Layout, :nav_item}],
+    "table" => [{Table, :table}, {Table, :table_head}, {Table, :table_row}],
+    "pagination" => [{Pagination, :pagination}],
+    "tabs" => [{Tabs, :tabs_list}, {Tabs, :tabs_panel}],
+    "select" => [{Select, :select}],
+    "badge" => [{Badge, :badge}],
+    "button" => [{Button, :button}],
+    "icon" => [{Icon, :icon}],
+    "input" => [{Form, :input}],
+    "datetime-field" => [{DatetimeField, :datetime_field}],
+    "calendar" => [{Calendar, :calendar}],
+    "date-picker" => [{DatePicker, :date_picker}, {DatePicker, :datetime_picker}],
+    "checkbox" => [{Checkbox, :checkbox}],
+    "modal" => [{Modal, :modal}],
+    "dropdown" => [
+      {Dropdown, :dropdown},
+      {Dropdown, :dropdown_button},
+      {Dropdown, :dropdown_link}
+    ],
+    "breadcrumb" => [{Breadcrumb, :breadcrumb}],
+    "empty-state" => [{EmptyState, :empty_state}],
+    "switch" => [{Switch, :switch}],
+    "radio" => [{Radio, :radio}],
+    "textarea" => [{Textarea, :textarea}],
+    "alert" => [{Alert, :alert}],
+    "separator" => [{Separator, :separator}],
+    "tooltip" => [{Tooltip, :tooltip}],
+    "toast" => [{Toast, :toast_group}],
+    "sheet" => [{Sheet, :sheet}],
+    "area-chart" => [{Charts, :area_chart}],
+    "line-chart" => [{Charts, :line_chart}],
+    "bar-chart" => [{Charts, :bar_chart}],
+    "sparkline" => [{Charts, :sparkline}]
+  }
+
   # Snippets retained for pages that still use the single-blob format
   # (app-shell, charts). Feature pages embed code per demo_section.
   @snippets %{
@@ -1642,6 +1679,8 @@ defmodule LanternDemoWeb.ComponentsLive do
         <.code_block id="code-sparkline" code={@snippets["sparkline"]} />
       </article>
 
+      <.api_section current={@current} />
+
       <style>
         .docs-topbar { display: flex; justify-content: space-between; align-items: center;
           gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--lantern-border);
@@ -1705,6 +1744,29 @@ defmodule LanternDemoWeb.ComponentsLive do
           overflow-x: auto; }
         .docs-code code { font-family: var(--lantern-font-mono); font-size: .75rem; line-height: 1.6;
           color: var(--lantern-fg); }
+
+        /* API reference tables */
+        .docs-api { margin-top: 3rem; max-width: 760px; }
+        .docs-api-fn { margin-top: 1.25rem; }
+        .docs-api-fn-name { font-size: .85rem; font-weight: 600; margin: 0 0 .5rem;
+          color: var(--lantern-fg-muted); }
+        .docs-api-fn-name code { font-family: var(--lantern-font-mono); }
+        .docs-api-table { width: 100%; border-collapse: collapse; font-size: .8125rem;
+          border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-md);
+          overflow: hidden; margin-bottom: 1rem; }
+        .docs-api-table th { text-align: left; font-weight: 550; font-size: .6875rem;
+          text-transform: uppercase; letter-spacing: .04em; color: var(--lantern-fg-muted);
+          background: var(--lantern-surface-sunken); padding: .5rem .8rem;
+          border-bottom: 1px solid var(--lantern-border); }
+        .docs-api-table td { padding: .55rem .8rem; border-bottom: 1px solid var(--lantern-border);
+          vertical-align: top; color: var(--lantern-fg-muted); }
+        .docs-api-table tr:last-child td { border-bottom: 0; }
+        .docs-api-table td:first-child { white-space: nowrap; }
+        .docs-api-table code { font-family: var(--lantern-font-mono); font-size: .75rem;
+          color: var(--lantern-fg); }
+        .docs-api-type { color: var(--lantern-accent) !important; }
+        .docs-api-default { color: var(--lantern-fg-subtle) !important; }
+        .docs-api-req { color: var(--lantern-danger); margin-left: 1px; font-weight: 700; }
       </style>
     </LanternDemoWeb.DocsShell.shell>
     """
@@ -1760,5 +1822,79 @@ defmodule LanternDemoWeb.ComponentsLive do
 
   defp slugify(title) do
     title |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> String.trim("-")
+  end
+
+  attr(:current, :string, required: true)
+
+  defp api_section(assigns) do
+    assigns = assign(assigns, :entries, Map.get(@api_map, assigns.current, []))
+
+    ~H"""
+    <section :if={@entries != []} class="docs-api">
+      <h2 class="docs-section-title">API reference</h2>
+      <p class="docs-section-desc">Props and slots, introspected from the component.</p>
+      <.api_table :for={{mod, fun} <- @entries} module={mod} fun={fun} multi={length(@entries) > 1} />
+    </section>
+    """
+  end
+
+  attr(:module, :atom, required: true)
+  attr(:fun, :atom, required: true)
+  attr(:multi, :boolean, default: false)
+
+  defp api_table(assigns) do
+    info = assigns.module.__components__()[assigns.fun]
+
+    assigns =
+      assign(assigns,
+        attrs: (info && Enum.reject(info.attrs, &(&1.type == :global))) || [],
+        slots: (info && info.slots) || []
+      )
+
+    ~H"""
+    <div class="docs-api-fn">
+      <h3 :if={@multi} class="docs-api-fn-name"><code>{@fun}/1</code></h3>
+      <table class="docs-api-table">
+        <thead>
+          <tr><th>Prop</th><th>Type</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr :for={a <- @attrs}>
+            <td><code>{a.name}</code><span :if={a.required} class="docs-api-req" title="required">*</span></td>
+            <td><code class="docs-api-type">{attr_type(a)}</code></td>
+            <td><code class="docs-api-default">{attr_default(a)}</code></td>
+            <td>{a.doc}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table :if={@slots != []} class="docs-api-table docs-api-slots">
+        <thead>
+          <tr><th>Slot</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr :for={sl <- @slots}>
+            <td>
+              <code>:{sl.name}</code><span :if={sl.required} class="docs-api-req">*</span>
+            </td>
+            <td>{sl.doc}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
+  defp attr_type(%{type: type, opts: opts}) do
+    cond do
+      Keyword.has_key?(opts, :values) -> Enum.map_join(opts[:values], " | ", &to_string/1)
+      is_atom(type) -> type |> Atom.to_string() |> String.trim_leading("Elixir.")
+      true -> inspect(type)
+    end
+  end
+
+  defp attr_default(%{required: true}), do: "—"
+
+  defp attr_default(%{opts: opts}) do
+    if Keyword.has_key?(opts, :default), do: inspect(opts[:default]), else: "—"
   end
 end
