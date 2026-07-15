@@ -18,7 +18,7 @@ defmodule LanternDemoWeb.DocsShell do
   alias LanternUI.Components.Theme
 
   @component_groups [
-    {"Layout", [{"app-shell", "App shell"}]},
+    {"Layout", [{"app-shell", "App shell"}, {"navlist", "Nav list"}]},
     {"Theming", [{"theming", "Theming"}]},
     {"Data",
      [
@@ -34,6 +34,7 @@ defmodule LanternDemoWeb.DocsShell do
        {"button", "Button"},
        {"icon", "Icon"},
        {"input", "Input"},
+       {"autocomplete", "Autocomplete"},
        {"datetime-field", "Datetime field"},
        {"calendar", "Calendar"},
        {"date-picker", "Date & time pickers"},
@@ -47,6 +48,7 @@ defmodule LanternDemoWeb.DocsShell do
        {"radio", "Radio"},
        {"textarea", "Textarea"},
        {"alert", "Alert"},
+       {"loading", "Loading"},
        {"separator", "Separator"},
        {"tooltip", "Tooltip"},
        {"toast", "Toast"}

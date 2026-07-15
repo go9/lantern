@@ -10,6 +10,7 @@ defmodule LanternDemoWeb.ComponentsLive do
 
   alias LanternUI.Charts
   alias LanternUI.Components.Alert
+  alias LanternUI.Components.Autocomplete
   alias LanternUI.Components.Badge
   alias LanternUI.Components.Breadcrumb
   alias LanternUI.Components.Button
@@ -22,7 +23,9 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Form
   alias LanternUI.Components.Icon
   alias LanternUI.Components.Layout
+  alias LanternUI.Components.Loading
   alias LanternUI.Components.Modal
+  alias LanternUI.Components.Navlist
   alias LanternUI.Components.Pagination
   alias LanternUI.Components.Radio
   alias LanternUI.Components.Select
@@ -43,6 +46,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   # slug -> the component functions whose props/slots to document (introspected)
   @api_map %{
     "app-shell" => [{Layout, :app_shell}, {Layout, :nav_group}, {Layout, :nav_item}],
+    "navlist" => [{Navlist, :navlist}, {Navlist, :navheading}, {Navlist, :navlink}],
     "table" => [{Table, :table}, {Table, :table_head}, {Table, :table_row}],
     "pagination" => [{Pagination, :pagination}],
     "tabs" => [{Tabs, :tabs_list}, {Tabs, :tabs_panel}],
@@ -51,6 +55,7 @@ defmodule LanternDemoWeb.ComponentsLive do
     "button" => [{Button, :button}],
     "icon" => [{Icon, :icon}],
     "input" => [{Form, :input}],
+    "autocomplete" => [{Autocomplete, :autocomplete}],
     "datetime-field" => [{DatetimeField, :datetime_field}],
     "calendar" => [{Calendar, :calendar}],
     "date-picker" => [{DatePicker, :date_picker}, {DatePicker, :datetime_picker}],
@@ -67,6 +72,7 @@ defmodule LanternDemoWeb.ComponentsLive do
     "radio" => [{Radio, :radio}],
     "textarea" => [{Textarea, :textarea}],
     "alert" => [{Alert, :alert}],
+    "loading" => [{Loading, :loading}],
     "separator" => [{Separator, :separator}],
     "tooltip" => [{Tooltip, :tooltip}],
     "toast" => [{Toast, :toast_group}],
@@ -236,6 +242,36 @@ defmodule LanternDemoWeb.ComponentsLive do
         <.code_block id="code-app-shell" code={@snippets["app-shell"]} />
       </article>
 
+      <article :if={@current == "navlist"} class="docs-body">
+        <h1>Nav list</h1>
+        <p>
+          Vertical navigation — an optional heading plus links. Items render as
+          <code>navigate</code>/<code>patch</code>/<code>href</code> links, or as a
+          button when given <code>phx-click</code>. Mirrors Fluxon's navlist surface.
+        </p>
+        <.demo_section
+          title="Headed list"
+          description="heading + navlink items; active marks the current page, icon adds a leading glyph."
+          code={~S'''
+          <.navlist heading="Workspace">
+            <.navlink href="#" active>Dashboard</.navlink>
+            <.navlink href="#" icon="hero-cube">Projects</.navlink>
+            <.navlink href="#" icon="hero-cog-6-tooth">Settings</.navlink>
+            <.navheading>Account</.navheading>
+            <.navlink href="#" icon="hero-user">Profile</.navlink>
+          </.navlist>
+          '''}
+        >
+          <Navlist.navlist heading="Workspace">
+            <Navlist.navlink href="#" active>Dashboard</Navlist.navlink>
+            <Navlist.navlink href="#" icon="hero-cube">Projects</Navlist.navlink>
+            <Navlist.navlink href="#" icon="hero-cog-6-tooth">Settings</Navlist.navlink>
+            <Navlist.navheading>Account</Navlist.navheading>
+            <Navlist.navlink href="#" icon="hero-user">Profile</Navlist.navlink>
+          </Navlist.navlist>
+        </.demo_section>
+      </article>
+
       <article :if={@current == "button"} class="docs-body">
         <h1>Button</h1>
         <p>
@@ -400,6 +436,36 @@ defmodule LanternDemoWeb.ComponentsLive do
           '''}
         >
           <Form.input id="in-4" name="ro" label="Disabled" value="read only" disabled />
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "autocomplete"} class="docs-body">
+        <h1>Autocomplete</h1>
+        <p>
+          Free-text combobox that filters a provided <code>options</code> list as you
+          type — client-side, keyboard-navigable, with a hidden value input for form
+          submission. Mirrors Fluxon's autocomplete (static-options case).
+        </p>
+        <.demo_section
+          title="Filter as you type"
+          description="options as {label, value} tuples or bare values; selection fills the hidden input."
+          code={~S'''
+          <.autocomplete
+            id="ac-fruit"
+            name="fruit"
+            label="Fruit"
+            placeholder="Search fruit…"
+            options={["Apple", "Apricot", "Banana", "Blackberry", "Cherry", "Grape", "Mango", "Orange"]}
+          />
+          '''}
+        >
+          <Autocomplete.autocomplete
+            id="ac-fruit"
+            name="fruit"
+            label="Fruit"
+            placeholder="Search fruit…"
+            options={["Apple", "Apricot", "Banana", "Blackberry", "Cherry", "Grape", "Mango", "Orange"]}
+          />
         </.demo_section>
       </article>
 
@@ -1420,6 +1486,51 @@ defmodule LanternDemoWeb.ComponentsLive do
             <:icon><Icon.icon name="sparkles" /></:icon>
             Using the <code>:icon</code> slot.
           </Alert.alert>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "loading"} class="docs-body">
+        <h1>Loading</h1>
+        <p>
+          Inline loading indicator — a rotating ring or three staggered dots
+          (bounce/fade/scale), in five sizes. CSS-only, no JS. Mirrors Fluxon's
+          <code>loading/1</code>.
+        </p>
+        <.demo_section
+          title="Variants"
+          description="ring plus the three dot styles."
+          code={~S'''
+          <.loading variant="ring" />
+          <.loading variant="dots-bounce" />
+          <.loading variant="dots-fade" />
+          <.loading variant="dots-scale" />
+          '''}
+        >
+          <div style="display:flex; align-items:center; gap:2rem;">
+            <Loading.loading variant="ring" />
+            <Loading.loading variant="dots-bounce" />
+            <Loading.loading variant="dots-fade" />
+            <Loading.loading variant="dots-scale" />
+          </div>
+        </.demo_section>
+        <.demo_section
+          title="Sizes"
+          description="xs through xl scale ring diameter and dot size."
+          code={~S'''
+          <.loading size="xs" />
+          <.loading size="sm" />
+          <.loading size="md" />
+          <.loading size="lg" />
+          <.loading size="xl" />
+          '''}
+        >
+          <div style="display:flex; align-items:center; gap:2rem;">
+            <Loading.loading size="xs" />
+            <Loading.loading size="sm" />
+            <Loading.loading size="md" />
+            <Loading.loading size="lg" />
+            <Loading.loading size="xl" />
+          </div>
         </.demo_section>
       </article>
 
