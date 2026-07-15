@@ -32,7 +32,7 @@ defmodule Lantern.MixProject do
   defp deps do
     [
       {:phoenix_live_view, "~> 1.1"},
-      {:livecode, "~> 0.1"},
+      {:livecode, github: "go9/livecode"},
       {:lantern_ui, github: "go9/lantern-ui"},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},

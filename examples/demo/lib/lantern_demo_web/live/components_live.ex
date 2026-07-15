@@ -181,7 +181,7 @@ defmodule LanternDemoWeb.ComponentsLive do
             persisted collapse come from the surrounding <code>app_shell</code>.
           </p>
         </div>
-        <pre class="docs-code"><code>{@snippets["app-shell"]}</code></pre>
+        <.code_block id="code-app-shell" code={@snippets["app-shell"]} />
       </article>
 
       <article :if={@current == "button"} class="docs-body">
@@ -729,7 +729,7 @@ defmodule LanternDemoWeb.ComponentsLive do
         <div class="docs-demo">
           <Charts.area_chart id="ch-area" series={@area} height={220} value_format={:currency} />
         </div>
-        <pre class="docs-code"><code>{@snippets["area-chart"]}</code></pre>
+        <.code_block id="code-area-chart" code={@snippets["area-chart"]} />
       </article>
 
       <article :if={@current == "line-chart"} class="docs-body">
@@ -738,7 +738,7 @@ defmodule LanternDemoWeb.ComponentsLive do
         <div class="docs-demo">
           <Charts.line_chart id="ch-line" series={@line} height={220} />
         </div>
-        <pre class="docs-code"><code>{@snippets["line-chart"]}</code></pre>
+        <.code_block id="code-line-chart" code={@snippets["line-chart"]} />
       </article>
 
       <article :if={@current == "bar-chart"} class="docs-body">
@@ -747,7 +747,7 @@ defmodule LanternDemoWeb.ComponentsLive do
         <div class="docs-demo">
           <Charts.bar_chart id="ch-bar" series={@bars} height={200} />
         </div>
-        <pre class="docs-code"><code>{@snippets["bar-chart"]}</code></pre>
+        <.code_block id="code-bar-chart" code={@snippets["bar-chart"]} />
       </article>
 
       <article :if={@current == "badge"} class="docs-body">
@@ -1624,7 +1624,7 @@ defmodule LanternDemoWeb.ComponentsLive do
             <Charts.sparkline id="ch-spark" series={[3, 5, 4, 8, 6, 9]} height={48} />
           </div>
         </div>
-        <pre class="docs-code"><code>{@snippets["sparkline"]}</code></pre>
+        <.code_block id="code-sparkline" code={@snippets["sparkline"]} />
       </article>
 
       <style>
@@ -1675,13 +1675,34 @@ defmodule LanternDemoWeb.ComponentsLive do
   slot(:inner_block, required: true)
 
   defp demo_section(assigns) do
+    assigns = assign(assigns, :code_id, "code-" <> slugify(assigns.title))
+
     ~H"""
     <section class="docs-section">
       <h2 class="docs-section-title">{@title}</h2>
       <p :if={@description} class="docs-section-desc">{@description}</p>
       <div class="docs-demo">{render_slot(@inner_block)}</div>
-      <pre class="docs-code"><code>{@code}</code></pre>
+      <.code_block id={@code_id} code={@code} />
     </section>
     """
+  end
+
+  attr(:id, :string, required: true)
+  attr(:code, :string, required: true)
+
+  defp code_block(assigns) do
+    ~H"""
+    <LiveCode.Editor.editor
+      id={@id}
+      language={LiveCode.Languages.HEEx}
+      readonly
+      value={String.trim(@code)}
+      class="docs-codeblock"
+    />
+    """
+  end
+
+  defp slugify(title) do
+    title |> String.downcase() |> String.replace(~r/[^a-z0-9]+/, "-") |> String.trim("-")
   end
 end

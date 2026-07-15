@@ -226,7 +226,14 @@ defmodule LanternDemoWeb.DataTableDemo do
           </p>
         </LanternUI.Components.Modal.modal>
 
-        <pre class="docs-code" style="margin-top:1.25rem;"><code>{snippet()}</code></pre>
+        <LiveCode.Editor.editor
+          id="dt-code"
+          language={LiveCode.Languages.HEEx}
+          readonly
+          value={String.trim(snippet())}
+          class="docs-codeblock"
+          style="margin-top:1.25rem;"
+        />
       </article>
     </LanternDemoWeb.DocsShell.shell>
     """
