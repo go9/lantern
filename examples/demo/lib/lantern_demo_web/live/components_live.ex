@@ -60,14 +60,29 @@ defmodule LanternDemoWeb.ComponentsLive do
     </.app_shell>
     """,
     "area-chart" => ~S"""
-    <.area_chart id="rev" series={@daily_revenue} height={220} value_format={:currency} />
+    # series: a list of %{date, value} points
+    daily_revenue = [
+      %{date: ~D[2026-06-01], value: 40.0},
+      %{date: ~D[2026-06-02], value: 47.5},
+      %{date: ~D[2026-06-03], value: 52.1}
+      # …one per day
+    ]
+
+    <.area_chart id="rev" series={daily_revenue} height={220} value_format={:currency} />
     """,
     "line-chart" => ~S"""
+    # series: a list of lines; each line's points are {datetime, value} tuples
+    web1 = [
+      {~U[2026-07-07 00:00:00Z], 0.30},
+      {~U[2026-07-07 01:00:00Z], 0.42}
+      # …one per hour
+    ]
+
     <.line_chart
       id="cpu"
       series={[
-        %{label: "web-1", color: "var(--lantern-accent)", points: @web1},
-        %{label: "web-2", color: "var(--lantern-fg-subtle)", points: @web2}
+        %{label: "web-1", color: "var(--lantern-accent)", points: web1},
+        %{label: "web-2", color: "var(--lantern-fg-subtle)", points: web2}
       ]}
     />
     """,
