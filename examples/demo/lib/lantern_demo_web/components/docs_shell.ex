@@ -12,24 +12,46 @@ defmodule LanternDemoWeb.DocsShell do
   use Phoenix.Component
 
   alias LanternUI.Components.Breadcrumb
+  alias LanternUI.Components.Button
   alias LanternUI.Components.Icon
   alias LanternUI.Components.Layout
+  alias LanternUI.Components.Theme
 
   @component_groups [
-    {"Layout", [{"app-shell", "App shell"}]},
+    {"Layout", [{"app-shell", "App shell"}, {"navlist", "Nav list"}]},
+    {"Theming", [{"theming", "Theming"}]},
+    {"Data",
+     [
+       {"data-table", "Data table"},
+       {"table", "Table"},
+       {"pagination", "Pagination"},
+       {"tabs", "Tabs"},
+       {"select", "Select"},
+       {"badge", "Badge"}
+     ]},
     {"Components",
      [
        {"button", "Button"},
        {"icon", "Icon"},
        {"input", "Input"},
+       {"autocomplete", "Autocomplete"},
        {"datetime-field", "Datetime field"},
        {"calendar", "Calendar"},
        {"date-picker", "Date & time pickers"},
        {"checkbox", "Checkbox"},
        {"modal", "Modal"},
+       {"sheet", "Sheet"},
        {"dropdown", "Dropdown menu"},
        {"breadcrumb", "Breadcrumb"},
-       {"empty-state", "Empty state"}
+       {"empty-state", "Empty state"},
+       {"switch", "Switch"},
+       {"radio", "Radio"},
+       {"textarea", "Textarea"},
+       {"alert", "Alert"},
+       {"loading", "Loading"},
+       {"separator", "Separator"},
+       {"tooltip", "Tooltip"},
+       {"toast", "Toast"}
      ]},
     {"Charts",
      [
@@ -59,7 +81,7 @@ defmodule LanternDemoWeb.DocsShell do
     ~H"""
     <Layout.app_shell
       id="lantern-demo-shell"
-      class={@theme == "dark" && "dark"}
+      class={[@theme == "dark" && "dark", @theme == "light" && "light"]}
       data-lantern-density={@density}
     >
       <:brand>
@@ -71,7 +93,17 @@ defmodule LanternDemoWeb.DocsShell do
           <:item current>{@label}</:item>
         </Breadcrumb.breadcrumb>
       </:header>
-      <:actions>{render_slot(@actions)}</:actions>
+      <:actions>
+        <div id="demo-chrome" phx-hook="DemoChrome" data-shell="lantern-demo-shell" class="demo-chrome">
+          <Button.button variant="outline" size="sm" type="button" data-part="theme-toggle">
+            <span data-part="theme-label">Dark</span>
+          </Button.button>
+          <Button.button variant="outline" size="sm" type="button" data-part="density-toggle">
+            <span data-part="density-label">Compact</span>
+          </Button.button>
+        </div>
+        {render_slot(@actions)}
+      </:actions>
 
       <:sidebar>
         <Layout.nav_group label="Tools">
@@ -89,10 +121,12 @@ defmodule LanternDemoWeb.DocsShell do
         </Layout.nav_group>
       </:sidebar>
 
+      <Theme.theme />
       {render_slot(@inner_block)}
     </Layout.app_shell>
 
     <style>
+      .demo-chrome { display: inline-flex; gap: 0.4rem; }
       .lui-nav-item-soon { opacity: 0.5; pointer-events: none; }
 
       /* Embedded DB-viewer demo: drop the standalone marketing chrome so it reads
@@ -108,6 +142,13 @@ defmodule LanternDemoWeb.DocsShell do
 
   @icons %{
     "app-shell" => "view-columns",
+    "theming" => "sparkles",
+    "data-table" => "circle-stack",
+    "table" => "bars-3",
+    "pagination" => "ellipsis-horizontal",
+    "tabs" => "view-columns",
+    "select" => "chevron-up-down",
+    "badge" => "check-circle",
     "button" => "cursor-arrow-rays",
     "icon" => "sparkles",
     "input" => "pencil-square",
@@ -116,9 +157,17 @@ defmodule LanternDemoWeb.DocsShell do
     "date-picker" => "calendar-days",
     "checkbox" => "check-circle",
     "modal" => "window",
+    "sheet" => "arrow-right",
     "dropdown" => "chevron-up-down",
     "breadcrumb" => "chevron-right",
     "empty-state" => "inbox",
+    "switch" => "check-circle",
+    "radio" => "check-circle",
+    "textarea" => "pencil-square",
+    "alert" => "exclamation-circle",
+    "separator" => "minus",
+    "tooltip" => "information-circle",
+    "toast" => "inbox",
     "area-chart" => "chart-bar",
     "line-chart" => "presentation-chart-line",
     "bar-chart" => "chart-bar",

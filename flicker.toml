@@ -1,2 +1,4 @@
+project = "lantern-ui"
+
 [app]
 name = "lantern-demo"
