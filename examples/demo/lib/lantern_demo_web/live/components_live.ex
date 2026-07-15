@@ -1766,28 +1766,33 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-code code { font-family: var(--lantern-font-mono); font-size: .75rem; line-height: 1.6;
           color: var(--lantern-fg); }
 
-        /* API reference tables */
-        .docs-api { margin-top: 3rem; max-width: 760px; }
-        .docs-api-fn { margin-top: 1.25rem; }
-        .docs-api-fn-name { font-size: .85rem; font-weight: 600; margin: 0 0 .5rem;
-          color: var(--lantern-fg-muted); }
-        .docs-api-fn-name code { font-family: var(--lantern-font-mono); }
-        .docs-api-table { width: 100%; border-collapse: collapse; font-size: .8125rem;
-          border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-md);
-          overflow: hidden; margin-bottom: 1rem; }
-        .docs-api-table th { text-align: left; font-weight: 550; font-size: .6875rem;
-          text-transform: uppercase; letter-spacing: .04em; color: var(--lantern-fg-muted);
-          background: var(--lantern-surface-sunken); padding: .5rem .8rem;
+        /* API reference — one dense card per component function. */
+        .docs-api { margin-top: 2.5rem; max-width: 760px; }
+        .docs-api-fn { border: 1px solid var(--lantern-border);
+          border-radius: var(--lantern-radius-md); overflow: hidden; margin-top: 1rem; }
+        .docs-api-fn-head { font-family: var(--lantern-font-mono); font-size: .75rem;
+          color: var(--lantern-fg-muted); padding: .35rem .7rem;
+          background: var(--lantern-surface-sunken);
           border-bottom: 1px solid var(--lantern-border); }
-        .docs-api-table td { padding: .55rem .8rem; border-bottom: 1px solid var(--lantern-border);
-          vertical-align: top; color: var(--lantern-fg-muted); }
+        .docs-api-table { width: 100%; border-collapse: collapse; font-size: .8125rem;
+          table-layout: fixed; }
+        .docs-api-c1 { width: 26%; } .docs-api-c2 { width: 20%; } .docs-api-c3 { width: 16%; }
+        .docs-api-table th { text-align: left; font-weight: 500; font-size: .625rem;
+          text-transform: uppercase; letter-spacing: .05em; color: var(--lantern-fg-subtle);
+          padding: .3rem .7rem; border-bottom: 1px solid var(--lantern-border); }
+        .docs-api-table td { padding: .32rem .7rem; line-height: 1.4; vertical-align: baseline;
+          color: var(--lantern-fg-muted); border-bottom: 1px solid var(--lantern-border);
+          overflow-wrap: anywhere; }
         .docs-api-table tr:last-child td { border-bottom: 0; }
-        .docs-api-table td:first-child { white-space: nowrap; }
         .docs-api-table code { font-family: var(--lantern-font-mono); font-size: .75rem;
           color: var(--lantern-fg); }
         .docs-api-type { color: var(--lantern-accent) !important; }
         .docs-api-default { color: var(--lantern-fg-subtle) !important; }
+        .docs-api-muted { color: var(--lantern-fg-muted); }
         .docs-api-req { color: var(--lantern-danger); margin-left: 1px; font-weight: 700; }
+        .docs-api-div td { background: var(--lantern-surface-sunken); font-size: .6rem;
+          text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
+          color: var(--lantern-fg-subtle); padding: .22rem .7rem; }
       </style>
     </LanternDemoWeb.DocsShell.shell>
     """
@@ -1874,10 +1879,15 @@ defmodule LanternDemoWeb.ComponentsLive do
 
     ~H"""
     <div class="docs-api-fn">
-      <h3 :if={@multi} class="docs-api-fn-name"><code>{@fun}/1</code></h3>
+      <div :if={@multi} class="docs-api-fn-head"><code>{@fun}/1</code></div>
       <table class="docs-api-table">
         <thead>
-          <tr><th>Prop</th><th>Type</th><th>Default</th><th>Description</th></tr>
+          <tr>
+            <th class="docs-api-c1">Prop</th>
+            <th class="docs-api-c2">Type</th>
+            <th class="docs-api-c3">Default</th>
+            <th>Description</th>
+          </tr>
         </thead>
         <tbody>
           <tr :for={a <- @attrs}>
@@ -1886,18 +1896,10 @@ defmodule LanternDemoWeb.ComponentsLive do
             <td><code class="docs-api-default">{attr_default(a)}</code></td>
             <td>{a.doc}</td>
           </tr>
-        </tbody>
-      </table>
-      <table :if={@slots != []} class="docs-api-table docs-api-slots">
-        <thead>
-          <tr><th>Slot</th><th>Description</th></tr>
-        </thead>
-        <tbody>
+          <tr :if={@slots != []} class="docs-api-div"><td colspan="4">Slots</td></tr>
           <tr :for={sl <- @slots}>
-            <td>
-              <code>:{sl.name}</code><span :if={sl.required} class="docs-api-req">*</span>
-            </td>
-            <td>{sl.doc}</td>
+            <td><code>:{sl.name}</code><span :if={sl.required} class="docs-api-req">*</span></td>
+            <td class="docs-api-muted" colspan="3">{sl.doc}</td>
           </tr>
         </tbody>
       </table>
