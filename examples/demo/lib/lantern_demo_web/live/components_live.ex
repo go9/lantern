@@ -1156,6 +1156,27 @@ defmodule LanternDemoWeb.ComponentsLive do
             patch_fn={fn params -> "/components/pagination?" <> Plug.Conn.Query.encode(params) end}
           />
         </.demo_section>
+        <.demo_section
+          title="Edges & small sets"
+          description="Prev is disabled on the first page, next on the last; few pages drop the gaps."
+          code={~S'''
+          <.pagination meta={%{current_page: 1, total_pages: 8, page_size: 25, total_count: 190}} patch_fn={pf} />
+          <.pagination meta={%{current_page: 3, total_pages: 3, page_size: 25, total_count: 62}} patch_fn={pf} />
+          '''}
+        >
+          <div class="docs-row" style="flex-direction: column; align-items: stretch; gap: 1rem;">
+            <Pagination.pagination
+              id="pg-first"
+              meta={%{current_page: 1, total_pages: 8, page_size: 25, total_count: 190}}
+              patch_fn={fn params -> "/components/pagination?" <> Plug.Conn.Query.encode(params) end}
+            />
+            <Pagination.pagination
+              id="pg-small"
+              meta={%{current_page: 3, total_pages: 3, page_size: 25, total_count: 62}}
+              patch_fn={fn params -> "/components/pagination?" <> Plug.Conn.Query.encode(params) end}
+            />
+          </div>
+        </.demo_section>
       </article>
 
       <article :if={@current == "switch"} class="docs-body">
