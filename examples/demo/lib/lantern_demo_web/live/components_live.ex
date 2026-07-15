@@ -1660,6 +1660,32 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-section-title { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;
           margin: 0 0 0.25rem; color: var(--lantern-fg); }
         .docs-section-desc { font-size: 0.85rem; color: var(--lantern-fg-muted); margin: 0 0 0.9rem; }
+
+        /* Framed example: one card, Preview/Code tabs, code hidden by default. */
+        .docs-example { border: 1px solid var(--lantern-border);
+          border-radius: var(--lantern-radius-lg); overflow: hidden;
+          background: var(--lantern-surface-raised); }
+        .docs-example-tabs { display: flex; gap: .15rem; padding: .35rem .45rem;
+          border-bottom: 1px solid var(--lantern-border); }
+        .docs-example-tab { appearance: none; border: 0; background: none; font: inherit;
+          font-size: .8125rem; font-weight: 550; color: var(--lantern-fg-muted);
+          padding: .28rem .7rem; border-radius: var(--lantern-radius-sm); cursor: pointer;
+          transition: color .12s cubic-bezier(0.16,1,0.3,1),
+            background .12s cubic-bezier(0.16,1,0.3,1); }
+        .docs-example-tab:hover { color: var(--lantern-fg); }
+        .docs-example-tab[aria-selected="true"] { color: var(--lantern-fg);
+          background: var(--lantern-surface-sunken); }
+        .docs-example-panel[data-panel="preview"] { padding: 2.25rem 1.75rem; min-height: 7rem;
+          display: flex; flex-direction: column; justify-content: center; }
+        /* The author display above beats the UA [hidden]{display:none}; guard it. */
+        .docs-example [data-panel][hidden] { display: none; }
+        /* No nested card: the frame owns the border/background. */
+        .docs-example-panel .docs-demo { border: 0; background: none; padding: 0;
+          display: flex; flex-direction: column; gap: .875rem; }
+        .docs-example-panel[data-panel="code"] .lc-editor { border: 0; border-radius: 0; }
+        .docs-example-panel[data-panel="code"] .docs-codeblock { margin: 0; }
+
+        /* Standalone preview (chart / app-shell articles that aren't tabbed). */
         .docs-demo { border: 1px solid var(--lantern-border); border-radius: var(--lantern-radius-lg);
           padding: 1.5rem; background: var(--lantern-surface-raised); display: flex;
           flex-direction: column; gap: .875rem; }
@@ -1690,14 +1716,29 @@ defmodule LanternDemoWeb.ComponentsLive do
   slot(:inner_block, required: true)
 
   defp demo_section(assigns) do
-    assigns = assign(assigns, :code_id, "code-" <> slugify(assigns.title))
+    slug = slugify(assigns.title)
+    assigns = assigns |> assign(:code_id, "code-" <> slug) |> assign(:ex_id, "ex-" <> slug)
 
     ~H"""
     <section class="docs-section">
       <h2 class="docs-section-title">{@title}</h2>
       <p :if={@description} class="docs-section-desc">{@description}</p>
-      <div class="docs-demo">{render_slot(@inner_block)}</div>
-      <.code_block id={@code_id} code={@code} />
+      <div id={@ex_id} class="docs-example" phx-hook="DocsExample">
+        <div class="docs-example-tabs" role="tablist" aria-label="Example view">
+          <button type="button" class="docs-example-tab" role="tab" data-tab="preview" aria-selected="true">
+            Preview
+          </button>
+          <button type="button" class="docs-example-tab" role="tab" data-tab="code" aria-selected="false">
+            Code
+          </button>
+        </div>
+        <div class="docs-example-panel" data-panel="preview">
+          <div class="docs-demo">{render_slot(@inner_block)}</div>
+        </div>
+        <div class="docs-example-panel" data-panel="code" hidden>
+          <.code_block id={@code_id} code={@code} />
+        </div>
+      </div>
     </section>
     """
   end

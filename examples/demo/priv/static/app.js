@@ -27,6 +27,30 @@ const TurnstileWidget = {
 
 const THEME_STORAGE_KEY = "lui-theme"
 
+const DocsExample = {
+  mounted() {
+    this.active = "preview"
+    this.el.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-tab]")
+      if (!tab) return
+      this.active = tab.dataset.tab
+      this.apply()
+    })
+    this.apply()
+  },
+  apply() {
+    this.el.querySelectorAll("[data-tab]").forEach((t) =>
+      t.setAttribute("aria-selected", String(t.dataset.tab === this.active))
+    )
+    this.el.querySelectorAll("[data-panel]").forEach((p) => {
+      p.hidden = p.dataset.panel !== this.active
+    })
+  },
+  updated() {
+    this.apply()
+  },
+}
+
 const DemoChrome = {
   // Client-side theme + density toggles for the whole demo shell. State lives
   // in localStorage and is re-applied after every LiveView patch (morphdom
@@ -124,7 +148,7 @@ const DemoTheming = {
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 const liveSocket = new LiveSocket("/live", Socket, {
-  hooks: { ...LanternUIHooks, LanternGrid, LiveCode, TurnstileWidget, DemoTheming, DemoChrome },
+  hooks: { ...LanternUIHooks, LanternGrid, LiveCode, TurnstileWidget, DemoTheming, DemoChrome, DocsExample },
   params: { _csrf_token: csrfToken },
 })
 
