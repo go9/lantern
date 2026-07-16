@@ -21,7 +21,8 @@ defmodule Lantern.Source do
             password: nil,
             database: nil,
             ssl: false,
-            parameters: []
+            parameters: [],
+            types: nil
 
   @type t :: %__MODULE__{
           hostname: String.t(),
@@ -30,7 +31,8 @@ defmodule Lantern.Source do
           password: String.t() | nil,
           database: String.t(),
           ssl: boolean(),
-          parameters: [{String.t(), String.t()}]
+          parameters: [{String.t(), String.t()}],
+          types: module() | nil
         }
 
   @default_port 5432
@@ -55,7 +57,8 @@ defmodule Lantern.Source do
       username: fetch(map, [:username, :user]),
       password: fetch(map, [:password, :pass]),
       database: fetch(map, [:database, :db]) || @default_database,
-      ssl: fetch(map, [:ssl]) || false
+      ssl: fetch(map, [:ssl]) || false,
+      types: fetch(map, [:types])
     }
 
     validate(source)
@@ -96,6 +99,11 @@ defmodule Lantern.Source do
   Converts a `Source` into the keyword list passed to `Postgrex.start_link/1`.
 
   `pool_size` is fixed at 1 — Lantern opens single, short-lived connections.
+
+  A `types` module (from `Postgrex.Types.define/3`) is passed through when set,
+  so a host app can teach the connection about extension types its databases
+  use — e.g. pgvector's `vector`, which `Postgrex.DefaultTypes` can't decode and
+  which otherwise crashes any table preview that selects such a column.
   """
   @spec to_postgrex_opts(t()) :: keyword()
   def to_postgrex_opts(%__MODULE__{} = source) do
@@ -111,10 +119,13 @@ defmodule Lantern.Source do
       timeout: 30_000
     ]
 
-    case source.parameters do
-      [] -> base
-      params -> Keyword.put(base, :parameters, params)
-    end
+    base
+    |> maybe_put(:parameters, source.parameters, &(&1 != []))
+    |> maybe_put(:types, source.types, &(&1 != nil))
+  end
+
+  defp maybe_put(opts, key, value, keep?) do
+    if keep?.(value), do: Keyword.put(opts, key, value), else: opts
   end
 
   # ---------------------------------------------------------------------------

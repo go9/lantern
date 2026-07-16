@@ -131,5 +131,15 @@ defmodule Lantern.SourceTest do
       assert opts[:pool_size] == 1
       assert is_integer(opts[:connect_timeout])
     end
+
+    test "omits :types when unset, passes it through when a module is given" do
+      {:ok, plain} = Source.from(%{host: "h", username: "u", password: "p", database: "db"})
+      refute Keyword.has_key?(Source.to_postgrex_opts(plain), :types)
+
+      {:ok, with_types} =
+        Source.from(%{host: "h", username: "u", password: "p", database: "db", types: MyApp.PgTypes})
+
+      assert Source.to_postgrex_opts(with_types)[:types] == MyApp.PgTypes
+    end
   end
 end
