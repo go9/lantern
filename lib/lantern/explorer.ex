@@ -3601,11 +3601,18 @@ defmodule Lantern.Explorer do
   end
 
   # The full Heroicons (MIT) OUTLINE set, read at COMPILE time from the heroicons
-  # source dep (deps/heroicons) — every `hero-*` name resolves, with no
-  # hand-maintained subset to drift out of date. icon/1 wraps its own
-  # <svg stroke="currentColor">, so we keep only each icon's inner <path> markup
-  # (the SVG body). Add the heroicons build dep (see mix.exs) to change the set.
-  @heroicons_glob "deps/heroicons/optimized/24/outline/*.svg"
+  # source dep — every `hero-*` name resolves, with no hand-maintained subset to
+  # drift out of date. icon/1 wraps its own <svg stroke="currentColor">, so we
+  # keep only each icon's inner <path> markup (the SVG body). Add the heroicons
+  # build dep (see mix.exs) to change the set.
+  #
+  # Locate the dep via Mix.Project.deps_paths (absolute) so this resolves whether
+  # Lantern is compiled standalone OR as a nested dep of a host app — a bare
+  # "deps/heroicons" relative path only works standalone.
+  @heroicons_glob Path.join(
+                    Map.get(Mix.Project.deps_paths(), :heroicons, "deps/heroicons"),
+                    "**/24/outline/*.svg"
+                  )
 
   @icons (for p <- Path.wildcard(@heroicons_glob), into: %{} do
             inner =
