@@ -71,6 +71,34 @@ defmodule Lantern.Errors do
   # short and safe to show; structs are handled by the clauses above.
   def humanize(reason), do: inspect(reason)
 
+  @doc """
+  Display copy for an exception returned by a **direct** connect attempt.
+
+  Use this instead of `humanize/1` only when the error came from opening a
+  connection yourself rather than from querying a pool. The two disagree on one
+  struct, deliberately:
+
+    * From a **pool**, a `%DBConnection.ConnectionError{}` only ever means "no
+      connection was available in time". Its message describes *our queue*
+      ("connection not available and request was dropped from queue after
+      5991ms") and never the database, so `humanize/1` is right to replace it
+      with `connection_error/0`.
+
+    * From a **direct connect**, that same struct carries the real socket-level
+      reason — `tcp connect (host:5432): non-existing domain - :nxdomain` —
+      which is exactly what the user needs to see.
+
+  Everything else defers to `humanize/1`, so a `Postgrex.Error` still gets the
+  Postgres message plus a hint.
+  """
+  @spec humanize_connect_error(Exception.t()) :: String.t()
+  def humanize_connect_error(%DBConnection.ConnectionError{message: message})
+      when is_binary(message) and message != "" do
+    message
+  end
+
+  def humanize_connect_error(error), do: humanize(error)
+
   # --- Hints -----------------------------------------------------------------
 
   # Prefer Postgres's own HINT when it sent one; otherwise map the SQLSTATE.

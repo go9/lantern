@@ -97,6 +97,62 @@ defmodule Lantern.ErrorsTest do
     end
   end
 
+  describe "humanize_connect_error/1 — errors from a direct connect attempt" do
+    test "surfaces a Postgres FATAL that the pool would have masked as a timeout" do
+      # Both captured live, from branches that previously only ever produced a
+      # generic pool queue_timeout.
+      for {code, message} <- [
+            {:connection_failure, "the database failed to resume; please retry"},
+            {:invalid_password, ~s(password authentication failed for user "postgres")}
+          ] do
+        error = %Postgrex.Error{postgres: %{code: code, message: message, severity: "FATAL"}}
+
+        result = Errors.humanize_connect_error(error)
+
+        assert result =~ message
+        refute result == Errors.connection_error()
+      end
+    end
+
+    test "surfaces a direct connect's socket-level reason" do
+      # The distinction from humanize/1: from a *pool* this struct means "no
+      # connection was available" and is noise; from a direct connect it is the
+      # actual reason, and the only useful thing we have.
+      error = %DBConnection.ConnectionError{
+        message: "tcp connect (db.example.com:5432): non-existing domain - :nxdomain"
+      }
+
+      result = Errors.humanize_connect_error(error)
+
+      assert result =~ "non-existing domain"
+      assert result =~ "db.example.com:5432"
+      refute result == Errors.connection_error()
+    end
+
+    test "humanize/1 still masks that same struct, because a pool's copy is noise" do
+      pool_error = %DBConnection.ConnectionError{
+        message: "connection not available and request was dropped from queue after 5991ms",
+        reason: :queue_timeout
+      }
+
+      assert Errors.humanize(pool_error) == Errors.connection_error()
+    end
+
+    test "falls back to the friendly copy when there is no message to show" do
+      assert Errors.humanize_connect_error(%DBConnection.ConnectionError{message: ""}) ==
+               Errors.connection_error()
+    end
+
+    test "defers to humanize/1 for everything else, hints included" do
+      error = %Postgrex.Error{postgres: %{message: "boom", code: :insufficient_privilege}}
+
+      result = Errors.humanize_connect_error(error)
+
+      assert result =~ "boom"
+      assert result =~ "isn't allowed"
+    end
+  end
+
   describe "other inputs" do
     test "a binary passes through unchanged" do
       assert Errors.humanize("already friendly") == "already friendly"
