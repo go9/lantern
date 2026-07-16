@@ -23,43 +23,62 @@ defmodule Lantern.ConnectionTest do
   @unreachable "postgres://someone:secret@127.0.0.1:1/some_db"
 
   setup_all do
-    # `fun` returns a value nothing else can produce, so the result alone shows
-    # whether it ran.
-    %{result: Connection.run(@unreachable, fn conn -> {:fun_ran, conn} end)}
+    parent = self()
+
+    # Mirrors the real call shape: every caller (see `Lantern.Explorer`) runs a
+    # query through the connection and renders whatever comes back through
+    # `Errors.humanize/1`. Reproducing both halves is what makes this a test of
+    # the copy a *user* ends up reading, rather than of an internal return value.
+    result =
+      Connection.run(@unreachable, fn conn ->
+        send(parent, :fun_ran)
+        Postgrex.query(conn, "SELECT 1", [])
+      end)
+
+    fun_ran? =
+      receive do
+        :fun_ran -> true
+      after
+        0 -> false
+      end
+
+    copy =
+      case result do
+        {:error, reason} -> Errors.humanize(reason)
+        other -> flunk("expected an error from an unreachable database, got: #{inspect(other)}")
+      end
+
+    %{copy: copy, fun_ran?: fun_ran?}
   end
 
   describe "a database that can't be connected to" do
-    test "surfaces the real connect error, not the pool's queue timeout", %{result: result} do
-      assert {:error, message} = result
-
+    test "surfaces the real connect error, not the pool's queue timeout", %{copy: copy} do
       # What the user actually wants to know: the connection was refused.
-      assert message =~ "tcp connect (127.0.0.1:1)"
-      assert message =~ "econnrefused"
+      assert copy =~ "tcp connect (127.0.0.1:1)"
+      assert copy =~ "econnrefused"
 
-      # The regression this test exists for. Pre-fix, `Postgrex.query/3`'s queue
-      # timeout reached `Errors.humanize/1` as a bare
-      # `%DBConnection.ConnectionError{}` and every one of these held instead.
-      refute message == Errors.connection_error()
-      refute message =~ "Couldn't connect"
-      refute message =~ "dropped from queue"
-      refute message =~ "pool_size"
+      # The regression this test exists for. Pre-fix, the pool's checkout timeout
+      # was the only thing a caller ever saw, so it humanized to the generic copy
+      # and every one of these held instead.
+      refute copy == Errors.connection_error()
+      refute copy =~ "Couldn't connect"
+      refute copy =~ "dropped from queue"
+      refute copy =~ "pool_size"
     end
 
-    test "never leaks a raw struct into the copy", %{result: result} do
-      assert {:error, message} = result
-
-      assert is_binary(message)
-      refute message =~ "DBConnection"
-      refute message =~ "ConnectionError"
-      refute message =~ "%"
+    test "never leaks a raw struct into the copy", %{copy: copy} do
+      assert is_binary(copy)
+      refute copy =~ "DBConnection"
+      refute copy =~ "ConnectionError"
+      refute copy =~ "%"
     end
 
-    test "does not run the caller's function when there is no connection", %{result: result} do
-      # Pre-fix, the `SET search_path` failure was discarded and `fun` ran anyway
-      # against a dead pool — buying a second identical queue timeout (the ~8s
-      # users saw) only to fail the same way. Had it run, the result would be
-      # `{:fun_ran, conn}`.
-      assert {:error, _message} = result
+    test "does not run the caller's function against a connection that never opened",
+         %{fun_ran?: fun_ran?} do
+      # Pre-fix, the `SET search_path` failure was discarded and `fun` was handed
+      # a pool that had never connected — so its query bought a second, identical
+      # queue timeout. That was the second half of the ~8s users waited.
+      refute fun_ran?
     end
 
     test "leaves the caller's process untouched" do
