@@ -36,6 +36,16 @@ defmodule Lantern.MixProject do
       {:lantern_ui, github: "go9/lantern-ui"},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
+      # Heroicons SVG source (build-only, uncompiled). icon/1 reads the outline
+      # set from this at COMPILE time, so every `hero-*` name resolves — no
+      # hand-maintained subset to drift. Same pin flicker uses.
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.2.0",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end
