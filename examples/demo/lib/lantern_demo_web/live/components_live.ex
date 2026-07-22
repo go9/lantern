@@ -255,19 +255,19 @@ defmodule LanternDemoWeb.ComponentsLive do
           code={~S'''
           <.navlist heading="Workspace">
             <.navlink href="#" active>Dashboard</.navlink>
-            <.navlink href="#" icon="hero-cube">Projects</.navlink>
-            <.navlink href="#" icon="hero-cog-6-tooth">Settings</.navlink>
+            <.navlink href="#" icon="folder">Projects</.navlink>
+            <.navlink href="#" icon="adjustments-horizontal">Settings</.navlink>
             <.navheading>Account</.navheading>
-            <.navlink href="#" icon="hero-user">Profile</.navlink>
+            <.navlink href="#" icon="document">Profile</.navlink>
           </.navlist>
           '''}
         >
           <Navlist.navlist heading="Workspace">
             <Navlist.navlink href="#" active>Dashboard</Navlist.navlink>
-            <Navlist.navlink href="#" icon="hero-cube">Projects</Navlist.navlink>
-            <Navlist.navlink href="#" icon="hero-cog-6-tooth">Settings</Navlist.navlink>
+            <Navlist.navlink href="#" icon="folder">Projects</Navlist.navlink>
+            <Navlist.navlink href="#" icon="adjustments-horizontal">Settings</Navlist.navlink>
             <Navlist.navheading>Account</Navlist.navheading>
-            <Navlist.navlink href="#" icon="hero-user">Profile</Navlist.navlink>
+            <Navlist.navlink href="#" icon="document">Profile</Navlist.navlink>
           </Navlist.navlist>
         </.demo_section>
       </article>
