@@ -3,6 +3,7 @@ import { LiveSocket } from "/js/phoenix_live_view.esm.js"
 import { LanternGrid } from "/lantern/hooks.js"
 import { LiveCode } from "/livecode/livecode.js"
 import LanternUIHooks from "/lantern_ui_hooks.js"
+import { S3, LanternS3Download } from "/lantern_s3_uploader.js"
 
 const TurnstileWidget = {
   mounted() {
@@ -148,7 +149,8 @@ const DemoTheming = {
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 const liveSocket = new LiveSocket("/live", Socket, {
-  hooks: { ...LanternUIHooks, LanternGrid, LiveCode, TurnstileWidget, DemoTheming, DemoChrome, DocsExample },
+  hooks: { ...LanternUIHooks, LanternGrid, LiveCode, LanternS3Download, TurnstileWidget, DemoTheming, DemoChrome, DocsExample },
+  uploaders: { S3 },
   params: { _csrf_token: csrfToken },
 })
 
