@@ -32,10 +32,8 @@ defmodule LanternDemoWeb.DemoLive do
 
   @impl true
   def terminate(_reason, socket) do
-    case socket.assigns.sandbox do
-      {:active, _url, ref, _ticks} -> LanternDemo.SandboxManager.stop(ref)
-      _ -> :ok
-    end
+    release_current(socket.assigns.sandbox)
+    :ok
   end
 
   # ---------------------------------------------------------------------------
@@ -62,15 +60,19 @@ defmodule LanternDemoWeb.DemoLive do
       :ok ->
         lv = self()
 
+        # claim/3 grants immediately if a slot is free, otherwise enqueues and
+        # reports the position. The manager monitors `lv` and later messages it
+        # directly ({:sandbox_granted,…}/{:queue_position,…}). The call runs in a
+        # Task because a granted slot provisions the DB synchronously.
         Task.start(fn ->
           result =
             try do
-              LanternDemo.SandboxManager.start(lv)
+              LanternDemo.SandboxManager.claim(:db, lv)
             catch
               :exit, _ -> {:error, "Sandbox creation timed out — please try again."}
             end
 
-          send(lv, {:sandbox_result, result})
+          send(lv, {:claim_result, result})
         end)
 
         {:noreply, assign(socket, sandbox: :creating)}
@@ -81,11 +83,7 @@ defmodule LanternDemoWeb.DemoLive do
   end
 
   def handle_event("release_sandbox", _params, socket) do
-    case socket.assigns.sandbox do
-      {:active, _url, ref, _ticks} -> LanternDemo.SandboxManager.stop(ref)
-      _ -> :ok
-    end
-
+    release_current(socket.assigns.sandbox)
     {:noreply, assign(socket, sandbox: :none, reset_nonce: System.unique_integer([:positive]))}
   end
 
@@ -93,14 +91,63 @@ defmodule LanternDemoWeb.DemoLive do
   # Info — sandbox creation result + countdown tick
   # ---------------------------------------------------------------------------
 
+  # Immediate reply from claim/3: granted a slot, queued, or rejected.
   @impl true
-  def handle_info({:sandbox_result, {:ok, %{url: url, ref: ref, ttl: ttl}}}, socket) do
+  def handle_info(
+        {:claim_result, {:granted, %{ref: ref, ttl: ttl, payload: %{url: url}}}},
+        socket
+      ) do
     schedule_tick()
     {:noreply, assign(socket, sandbox: {:active, url, ref, ttl})}
   end
 
-  def handle_info({:sandbox_result, {:error, reason}}, socket) do
-    {:noreply, assign(socket, sandbox: {:error, reason})}
+  def handle_info({:claim_result, {:queued, %{ref: ref, position: position}}}, socket) do
+    {:noreply, assign(socket, sandbox: {:queued, ref, position})}
+  end
+
+  def handle_info({:claim_result, {:error, reason}}, socket) do
+    {:noreply, assign(socket, sandbox: {:error, humanize_claim_error(reason)})}
+  end
+
+  # A queued visitor's slot opened — the manager provisioned and messaged us.
+  def handle_info({:sandbox_granted, ref, %{ttl: ttl, payload: %{url: url}}}, socket) do
+    case socket.assigns.sandbox do
+      {:queued, ^ref, _position} ->
+        schedule_tick()
+        {:noreply, assign(socket, sandbox: {:active, url, ref, ttl})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_info({:queue_position, ref, position}, socket) do
+    case socket.assigns.sandbox do
+      {:queued, ^ref, _} -> {:noreply, assign(socket, sandbox: {:queued, ref, position})}
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_info({:sandbox_failed, ref, reason}, socket) do
+    case socket.assigns.sandbox do
+      {:queued, ^ref, _} ->
+        {:noreply, assign(socket, sandbox: {:error, humanize_claim_error(reason)})}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  # Authoritative TTL expiry from the manager (backstop to the local countdown).
+  def handle_info({:sandbox_expired, ref}, socket) do
+    case socket.assigns.sandbox do
+      {:active, _url, ^ref, _} ->
+        {:noreply,
+         assign(socket, sandbox: :expired, reset_nonce: System.unique_integer([:positive]))}
+
+      _ ->
+        {:noreply, socket}
+    end
   end
 
   @impl true
@@ -133,6 +180,16 @@ defmodule LanternDemoWeb.DemoLive do
   end
 
   defp schedule_tick, do: Process.send_after(self(), :sandbox_tick, 1_000)
+
+  defp release_current({:active, _url, ref, _ticks}), do: LanternDemo.SandboxManager.release(ref)
+  defp release_current({:queued, ref, _position}), do: LanternDemo.SandboxManager.release(ref)
+  defp release_current(_), do: :ok
+
+  defp humanize_claim_error(:queue_full),
+    do: "The wait queue is full right now — please try again in a few minutes."
+
+  defp humanize_claim_error(reason) when is_binary(reason), do: reason
+  defp humanize_claim_error(_), do: "Something went wrong — please try again."
 
   defp format_time(seconds) do
     m = div(seconds, 60)
@@ -223,6 +280,22 @@ defmodule LanternDemoWeb.DemoLive do
           data-sitekey={@turnstile_site_key}
           phx-update="ignore"
         >
+        </div>
+      </section>
+
+      <%!-- Wait-queue position --%>
+      <section
+        :if={match?({:queued, _, _}, @sandbox)}
+        class="demo-panel demo-warning demo-sandbox-bar"
+      >
+        <div class="demo-sandbox-desc">
+          <span class="demo-readonly-badge">Queued</span>
+          Demo is full — you're <strong>{elem(@sandbox, 2)}</strong> in line.
+          Your private sandbox starts automatically the moment a slot opens; keep
+          this tab open.
+        </div>
+        <div class="demo-sandbox-actions">
+          <button phx-click="release_sandbox" class="demo-btn demo-btn-sm">Leave queue</button>
         </div>
       </section>
 
