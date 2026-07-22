@@ -17,6 +17,7 @@ defmodule LanternDemoWeb.Layouts do
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
         <link rel="stylesheet" href="/lantern_ui_theme.css" />
         <link rel="stylesheet" href="/lantern_ui.css" />
+        <link rel="stylesheet" href="/lantern_s3.css" />
         <style>
           /* Feed lantern-ui the flicker type system: Space Grotesk brand/headings,
              Inter body, JetBrains Mono for code. */
