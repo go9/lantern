@@ -150,10 +150,11 @@ defmodule LanternDemoWeb.S3DemoLive do
   def handle_info({:s3_upload_event, :upload, %{keys: keys}}, socket) do
     case socket.assigns.sandbox do
       {:active, session} ->
+        # Side effect only: delete anything oversize/wrong-type that slipped past.
+        # The Explorer re-lists itself on upload, so we must NOT send_update it here
+        # (that would re-emit :upload → this handler → an infinite loop).
         survivors = sweep_completed(session, keys)
         merged = merge_files(session.files, survivors)
-        # Re-list the Explorer after the sweep so oversize deletions disappear.
-        send_update(LanternS3.Explorer, id: "s3-sandbox-explorer", uploaded: %{keys: survivors})
         {:noreply, assign(socket, sandbox: {:active, %{session | files: merged}})}
 
       _ ->
@@ -212,15 +213,20 @@ defmodule LanternDemoWeb.S3DemoLive do
     )
   end
 
-  defp sweep_completed(session, keys) do
+  defp sweep_completed(session, entries) do
     case Storage.s3_config() do
       {:ok, config} ->
-        Enum.flat_map(keys, &sweep_key(config, session.bucket, &1))
+        Enum.flat_map(entries, &sweep_key(config, session.bucket, entry_key(&1)))
 
       {:error, _} ->
         []
     end
   end
+
+  # The uploader reports each completed file as a descriptor map (%{key, name,
+  # size, url}); tolerate a bare string key too.
+  defp entry_key(%{key: key}), do: key
+  defp entry_key(key) when is_binary(key), do: key
 
   defp sweep_key(config, bucket, key) do
     with {:ok, meta} <- S3.head(config, bucket, key),
