@@ -144,14 +144,15 @@ defmodule LanternDemoWeb.S3DemoLive do
     end
   end
 
-  # Upload completion: sweep each key, dropping anything oversize / wrong-type
-  # that slipped past the client, and surface short-lived GET links for the rest.
-  def handle_info({:s3_upload_event, :completed, %{keys: keys}}, socket) do
+  # Upload completion: the Explorer forwards the uploader's completion as an
+  # `:upload` event. Sweep each key, dropping anything oversize / wrong-type that
+  # slipped past the client, then re-list so deletions are reflected.
+  def handle_info({:s3_upload_event, :upload, %{keys: keys}}, socket) do
     case socket.assigns.sandbox do
       {:active, session} ->
         survivors = sweep_completed(session, keys)
         merged = merge_files(session.files, survivors)
-        # Re-list the embedded Explorer so the just-uploaded objects appear.
+        # Re-list the Explorer after the sweep so oversize deletions disappear.
         send_update(LanternS3.Explorer, id: "s3-sandbox-explorer", uploaded: %{keys: survivors})
         {:noreply, assign(socket, sandbox: {:active, %{session | files: merged}})}
 
@@ -190,20 +191,24 @@ defmodule LanternDemoWeb.S3DemoLive do
   # cap or with a non-allowlisted content-type, and presign a short GET for the
   # survivors. HEAD returns the raw ExAws response, so headers are parsed
   # case-insensitively.
-  # The embedded browser: the real lantern-s3 Explorer, locked to this session's
-  # own prefix (root_prefix) so it can only ever see/act on the visitor's uploads,
-  # never another session's. Uploads stay on the gated Uploader above (which
-  # enforces type/size/quota); here we grant browse + download + delete only.
-  defp explorer_scope(%{bucket: bucket, prefix: prefix}) do
+  # The whole S3 interface: one lantern-s3 Explorer (browse + upload + download +
+  # delete), locked to this session's own prefix (root_prefix) so it can only ever
+  # see/act on the visitor's uploads, never another session's. Its built-in
+  # uploader is wired to the GATED sandbox adapter + the type/size/count limits,
+  # so uploads are policy-enforced despite being a public surface.
+  defp explorer_scope(%{bucket: bucket, prefix: prefix}, on_event) do
     {:ok, config} = Storage.s3_config()
 
     Scope.new(
       adapter: S3,
       config: config,
       buckets: [%{name: bucket, label: "Your files"}],
-      capabilities: [:download, :delete],
+      capabilities: [:upload, :download, :delete],
       auto_open: true,
-      root_prefix: prefix
+      root_prefix: prefix,
+      on_event: on_event,
+      upload_adapter: LanternDemo.S3Sandbox.Adapter,
+      upload_opts: %{accept: @accept, max_entries: 5, max_file_size: 5_242_880}
     )
   end
 
@@ -367,28 +372,16 @@ defmodule LanternDemoWeb.S3DemoLive do
           </div>
 
           <.live_component
-            module={LanternS3.Uploader}
-            id="s3-sandbox-uploader"
-            adapter={LanternDemo.S3Sandbox.Adapter}
-            adapter_config={%{bucket: elem(@sandbox, 1).bucket, prefix: elem(@sandbox, 1).prefix}}
-            accept={@accept}
-            max_entries={5}
-            max_file_size={5_242_880}
-            on_event={@on_event}
+            module={LanternS3.Explorer}
+            id="s3-sandbox-explorer"
+            scope={explorer_scope(elem(@sandbox, 1), @on_event)}
           />
 
-          <div class="demo-uploaded">
-            <h3 class="demo-uploaded-title">Your files</h3>
-            <.live_component
-              module={LanternS3.Explorer}
-              id="s3-sandbox-explorer"
-              scope={explorer_scope(elem(@sandbox, 1))}
-            />
-            <p class="demo-uploaded-note">
-              The real lantern-s3 file browser, scoped to your private session prefix —
-              everything here is deleted when your session ends.
-            </p>
-          </div>
+          <p class="demo-uploaded-note">
+            The real lantern-s3 file manager (browse · upload · download · delete),
+            scoped to your private session prefix — everything here is deleted when
+            your session ends.
+          </p>
         </section>
       </div>
     </LanternDemoWeb.DocsShell.shell>
