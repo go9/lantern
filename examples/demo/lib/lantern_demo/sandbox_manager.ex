@@ -173,7 +173,7 @@ defmodule LanternDemo.SandboxManager do
     case provision(provider) do
       {:ok, resource} ->
         state = activate(state, pool, provider, ref, pid, monitor, resource)
-        reply = %{ref: ref, ttl: state.ttl_seconds, payload: provider.payload(resource)}
+        reply = %{ref: ref, ttl: pool_ttl(state, pool), payload: provider.payload(resource)}
         {:reply, {:granted, reply}, state}
 
       {:error, reason} ->
@@ -221,7 +221,7 @@ defmodule LanternDemo.SandboxManager do
         send(
           head.pid,
           {:sandbox_granted, head.ref,
-           %{ttl: state.ttl_seconds, payload: provider.payload(resource)}}
+           %{ttl: pool_ttl(state, pool), payload: provider.payload(resource)}}
         )
 
         state |> rebroadcast_positions(pool) |> promote(pool)
@@ -238,7 +238,7 @@ defmodule LanternDemo.SandboxManager do
   # ---------------------------------------------------------------------------
 
   defp activate(state, pool, provider, ref, pid, monitor, resource) do
-    timer = Process.send_after(self(), {:expire, ref}, state.ttl_seconds * 1_000)
+    timer = Process.send_after(self(), {:expire, ref}, pool_ttl(state, pool) * 1_000)
 
     entry = %{
       pool: pool,
@@ -304,9 +304,17 @@ defmodule LanternDemo.SandboxManager do
 
   defp normalize_pools(pools) do
     Map.new(pools, fn {key, cfg} ->
-      {key, %{max: Keyword.fetch!(cfg, :max), provider: Keyword.fetch!(cfg, :provider)}}
+      {key,
+       %{
+         max: Keyword.fetch!(cfg, :max),
+         provider: Keyword.fetch!(cfg, :provider),
+         ttl: Keyword.get(cfg, :ttl_seconds)
+       }}
     end)
   end
+
+  # Per-pool TTL override (pool config `:ttl_seconds`), else the manager default.
+  defp pool_ttl(state, pool), do: state.pools[pool][:ttl] || state.ttl_seconds
 
   defp provision(provider) do
     provider.provision()
