@@ -109,7 +109,7 @@ defmodule LanternDemoWeb.DocsShell do
         <Layout.nav_group label="Tools">
           <Layout.nav_item label="DB viewer" icon="circle-stack" navigate="/" active={@current == "db"} />
           <Layout.nav_item label="S3 viewer" icon="cloud" navigate="/storage" active={@current == "s3"} />
-          <Layout.nav_item label="LiveCode" icon="code-bracket" navigate="/livecode" active={@current == "livecode"} />
+          <Layout.nav_item label="LiveCode" icon="pencil-square" navigate="/livecode" active={@current == "livecode"} />
         </Layout.nav_group>
         <Layout.nav_group :for={{group, items} <- @groups} label={group}>
           <Layout.nav_item

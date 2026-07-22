@@ -322,7 +322,7 @@ defmodule LanternDemoWeb.DataTableDemo do
             filters={[%{field: "status", value: "pending"}]} />
       <:filter field={:channel} options={@channels} />
       <:col :let={o} label="Order" field={:reference} sortable>{o.reference}</:col>
-      <:bulk_action label="Archive" icon="archive-box" event="bulk-archive" />
+      <:bulk_action label="Archive" icon="inbox" event="bulk-archive" />
       <:row_action :let={o}>…</:row_action>
       <:card :let={o}>…</:card>
     </.data_table>
