@@ -97,6 +97,15 @@ defmodule LanternDemo.S3Sandbox.Limits do
 
   def sanitize_basename(_), do: {:error, :invalid_name}
 
+  @doc """
+  Server-side type re-validation for one entry: the extension must be
+  allowlisted AND the client-declared content-type must match it. Used at
+  presign time (where size isn't yet known) and by the completion sweep.
+  """
+  @spec validate_type(String.t(), String.t()) ::
+          :ok | {:error, :type_not_allowed | :type_mismatch}
+  def validate_type(ext, content_type), do: check_type(String.downcase(ext), content_type)
+
   @doc "Human message for a rejection reason."
   def message(:type_not_allowed),
     do: "That file type isn't allowed. Try jpg, png, webp, gif, or pdf."
