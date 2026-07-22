@@ -111,6 +111,18 @@ defmodule LanternDemo.S3Sandbox.LimitsTest do
     end
   end
 
+  describe "validate_type/2 — presign-time server-side re-check" do
+    test "accepts an allowlisted extension whose content-type matches" do
+      assert :ok = Limits.validate_type("PNG", "image/png")
+      assert :ok = Limits.validate_type("jpg", "image/jpeg")
+    end
+
+    test "rejects a disallowed extension and a mismatched content-type" do
+      assert {:error, :type_not_allowed} = Limits.validate_type("exe", "application/octet-stream")
+      assert {:error, :type_mismatch} = Limits.validate_type("png", "application/octet-stream")
+    end
+  end
+
   describe "content_type/1" do
     test "returns the canonical content-type to pin on the presigned PUT" do
       assert {:ok, "image/jpeg"} = Limits.content_type("JPG")

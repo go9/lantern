@@ -25,6 +25,7 @@ defmodule LanternDemo.MixProject do
   defp deps do
     [
       {:lantern, path: "../.."},
+      {:lantern_s3, github: "go9/lantern-s3"},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_view, "~> 1.1"},
       {:postgrex, "~> 0.17"},
