@@ -11,7 +11,10 @@ defmodule LanternDemoWeb.Layouts do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="csrf-token" content={get_csrf_token()} />
-        <title>Lantern Demo</title>
+        <title>Lantern — open-source LiveView tools</title>
+        <meta name="description" content="Lantern is a family of open-source Phoenix LiveView tools: a Postgres table editor, an S3 file manager, and an in-browser code editor. Try them live." />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
