@@ -5,7 +5,7 @@ defmodule LanternDemoWeb.S3DemoLive do
   Anonymous visitors exercise the real lantern-s3 upload flow (drag-drop,
   progress, cancel/clear) against real object storage, bounded to be safe:
   Turnstile-gated, slot-limited with a FIFO wait queue (shared `SandboxManager`),
-  5-minute TTL, and per-session prefix isolation. `S3Sandbox.Adapter` enforces
+  1-minute TTL, and per-session prefix isolation. `S3Sandbox.Adapter` enforces
   type + safe keys server-side; `allow_upload` enforces count/size/aggregate;
   the completion sweep deletes anything a lying client slipped past.
 
@@ -16,6 +16,7 @@ defmodule LanternDemoWeb.S3DemoLive do
 
   alias LanternDemo.S3Sandbox.Limits
   alias LanternDemo.S3Sandbox.Storage
+  alias LanternS3.Scope
   alias LanternS3.Storage.S3
 
   @accept ~w(.jpg .jpeg .png .webp .gif .pdf)
@@ -150,6 +151,8 @@ defmodule LanternDemoWeb.S3DemoLive do
       {:active, session} ->
         survivors = sweep_completed(session, keys)
         merged = merge_files(session.files, survivors)
+        # Re-list the embedded Explorer so the just-uploaded objects appear.
+        send_update(LanternS3.Explorer, id: "s3-sandbox-explorer", uploaded: %{keys: survivors})
         {:noreply, assign(socket, sandbox: {:active, %{session | files: merged}})}
 
       _ ->
@@ -187,6 +190,23 @@ defmodule LanternDemoWeb.S3DemoLive do
   # cap or with a non-allowlisted content-type, and presign a short GET for the
   # survivors. HEAD returns the raw ExAws response, so headers are parsed
   # case-insensitively.
+  # The embedded browser: the real lantern-s3 Explorer, locked to this session's
+  # own prefix (root_prefix) so it can only ever see/act on the visitor's uploads,
+  # never another session's. Uploads stay on the gated Uploader above (which
+  # enforces type/size/quota); here we grant browse + download + delete only.
+  defp explorer_scope(%{bucket: bucket, prefix: prefix}) do
+    {:ok, config} = Storage.s3_config()
+
+    Scope.new(
+      adapter: S3,
+      config: config,
+      buckets: [%{name: bucket, label: "Your files"}],
+      capabilities: [:download, :delete],
+      auto_open: true,
+      root_prefix: prefix
+    )
+  end
+
   defp sweep_completed(session, keys) do
     case Storage.s3_config() do
       {:ok, config} ->
@@ -255,15 +275,6 @@ defmodule LanternDemoWeb.S3DemoLive do
     "#{m}:#{String.pad_leading(to_string(s), 2, "0")}"
   end
 
-  defp human_size(bytes) when is_integer(bytes) and bytes >= 1_048_576,
-    do: "#{Float.round(bytes / 1_048_576, 1)} MB"
-
-  defp human_size(bytes) when is_integer(bytes) and bytes >= 1_024,
-    do: "#{Float.round(bytes / 1_024, 1)} KB"
-
-  defp human_size(bytes) when is_integer(bytes), do: "#{bytes} B"
-  defp human_size(_), do: ""
-
   # ---------------------------------------------------------------------------
   # Render
   # ---------------------------------------------------------------------------
@@ -281,7 +292,7 @@ defmodule LanternDemoWeb.S3DemoLive do
             drops a storage-agnostic uploader and browser into any LiveView —
             direct-to-S3 uploads with progress, cancel, and clear. This live demo gives you a
             private, ephemeral workspace: uploads are capped, links expire, and everything is
-            deleted when your 5-minute session ends.
+            deleted when your 1-minute session ends.
             <a href="https://github.com/go9/lantern-s3" target="_blank" rel="noopener">
               View on GitHub →
             </a>
@@ -303,7 +314,7 @@ defmodule LanternDemoWeb.S3DemoLive do
             {if @sandbox == :expired do
               "Session expired — your uploads were deleted."
             else
-              "Try the real uploader against live storage. jpg/png/webp/gif/pdf, up to 5 files, 5 MB each — a private 5-minute session."
+              "Try the real uploader against live storage. jpg/png/webp/gif/pdf, up to 5 files, 5 MB each — a private 1-minute session."
             end}
             <span :if={match?({:error, _}, @sandbox)} class="demo-error-text">
               {elem(@sandbox, 1)}
@@ -319,7 +330,7 @@ defmodule LanternDemoWeb.S3DemoLive do
         <%!-- Turnstile --%>
         <section :if={@sandbox in [:verifying, :creating]} class="demo-panel demo-captcha-panel">
           <p :if={@sandbox == :verifying} class="demo-captcha-hint">
-            Complete the challenge to unlock your private 5-minute upload session.
+            Complete the challenge to unlock your private 1-minute upload session.
           </p>
           <p :if={@sandbox == :creating} class="demo-captcha-hint">Reserving your session…</p>
           <div
@@ -366,15 +377,17 @@ defmodule LanternDemoWeb.S3DemoLive do
             on_event={@on_event}
           />
 
-          <div :if={elem(@sandbox, 1).files != []} class="demo-uploaded">
+          <div class="demo-uploaded">
             <h3 class="demo-uploaded-title">Your files</h3>
-            <ul class="demo-uploaded-list">
-              <li :for={file <- elem(@sandbox, 1).files} class="demo-uploaded-item">
-                <a href={file.url} target="_blank" rel="noopener">{file.name}</a>
-                <span class="demo-uploaded-size">{human_size(file.size)}</span>
-              </li>
-            </ul>
-            <p class="demo-uploaded-note">Links are private and expire in 5 minutes.</p>
+            <.live_component
+              module={LanternS3.Explorer}
+              id="s3-sandbox-explorer"
+              scope={explorer_scope(elem(@sandbox, 1))}
+            />
+            <p class="demo-uploaded-note">
+              The real lantern-s3 file browser, scoped to your private session prefix —
+              everything here is deleted when your session ends.
+            </p>
           </div>
         </section>
       </div>

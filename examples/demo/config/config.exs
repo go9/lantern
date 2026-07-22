@@ -28,7 +28,9 @@ config :lantern_demo,
 config :lantern_demo, LanternDemo.SandboxManager,
   pools: %{
     db: [max: 5, provider: LanternDemo.Sandbox.DbProvider],
-    s3: [max: 5, provider: LanternDemo.S3Sandbox.PrefixProvider]
+    # S3 upload sessions are short so slots recycle fast (upload → browse → done);
+    # the DB demo keeps the manager-wide default.
+    s3: [max: 5, provider: LanternDemo.S3Sandbox.PrefixProvider, ttl_seconds: 60]
   }
 
 # S3 upload sandbox (optional). Backed by a single flicker-managed bucket reached
