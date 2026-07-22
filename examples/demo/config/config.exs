@@ -17,7 +17,32 @@ config :phoenix, :json_library, Jason
 # Override TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY in production.
 config :lantern_demo,
   turnstile_site_key: System.get_env("TURNSTILE_SITE_KEY", "1x00000000000000000000AA"),
-  turnstile_secret_key: System.get_env("TURNSTILE_SECRET_KEY", "1x0000000000000000000000000000000AA"),
+  turnstile_secret_key:
+    System.get_env("TURNSTILE_SECRET_KEY", "1x0000000000000000000000000000000AA"),
   # Flicker branch sandbox — omit in local dev to fall back to raw Postgres.
   flicker_api_key: System.get_env("FLICKER_API_KEY"),
   flicker_database_id: System.get_env("FLICKER_DATABASE_ID")
+
+# Both demos share the slot+queue admission engine: 5 concurrent sessions per
+# pool with a FIFO wait queue.
+config :lantern_demo, LanternDemo.SandboxManager,
+  pools: %{
+    db: [max: 5, provider: LanternDemo.Sandbox.DbProvider],
+    s3: [max: 5, provider: LanternDemo.S3Sandbox.PrefixProvider]
+  }
+
+# S3 upload sandbox (optional). Creds are scoped to ONE private bucket; sessions
+# isolate by prefix, so no bucket create/delete power lives in this app. Unset ⇒
+# the upload demo shows a "coming soon" state; the rest of the page is fine.
+config :ex_aws, json_codec: Jason
+
+config :ex_aws,
+  access_key_id: System.get_env("TIGRIS_ACCESS_KEY_ID"),
+  secret_access_key: System.get_env("TIGRIS_SECRET_ACCESS_KEY")
+
+config :ex_aws, :s3,
+  scheme: "https://",
+  host: System.get_env("TIGRIS_ENDPOINT", "t3.storage.dev"),
+  region: System.get_env("TIGRIS_REGION", "auto")
+
+config :lantern_demo, :s3_sandbox_bucket, System.get_env("S3_SANDBOX_BUCKET")
