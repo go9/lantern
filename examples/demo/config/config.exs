@@ -38,6 +38,12 @@ config :lantern_demo, LanternDemo.SandboxManager,
 # rest of the page is fine.
 config :ex_aws, json_codec: Jason
 
+# ExAws' default HTTP client is hackney, which isn't a dep here — use the Req
+# adapter shipped in ex_aws (we already depend on :req). Without this, every
+# server-side S3 call (Explorer listing, completion head-sweep, reaper
+# delete_prefix) crashes with "ExAws.Request.Hackney is not available".
+config :ex_aws, http_client: ExAws.Request.Req
+
 config :ex_aws,
   access_key_id: System.get_env("S3_ACCESS_KEY_ID"),
   secret_access_key: System.get_env("S3_SECRET_ACCESS_KEY")
