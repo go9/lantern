@@ -17,6 +17,9 @@ defmodule LanternDemoWeb.Router do
     pipe_through(:browser)
 
     live("/", DemoLive, :index)
+    # Reachable directly for QA; the sidebar link stays "soon" until the live
+    # abuse-control checks pass (flicker #986).
+    live("/storage", S3DemoLive, :index)
     live("/components", ComponentsLive, :index)
     live("/components/data-table", DataTableDemo)
     live("/components/theming", ThemingLive)

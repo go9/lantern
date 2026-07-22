@@ -11,33 +11,39 @@ defmodule LanternDemo.S3Sandbox.Adapter do
   The presigned PUT pins `Content-Type`, and a post-completion `head/3` sweep
   (see the reaper) is the backstop for a client that lies about size/type.
 
-  `config` (the component's `:adapter_config` assign) is:
-
-      %{s3: %LanternS3.Storage.S3.Config{}, bucket: String.t(), prefix: String.t()}
+  `config` (the component's `:adapter_config` assign) is just the session's
+  `%{bucket: String.t(), prefix: String.t()}` — the scoped S3 credentials are
+  fetched internally from `S3Sandbox.Storage`, never carried through LiveView
+  assigns.
   """
 
   @behaviour LanternS3.Uploader.Adapter
 
   alias LanternDemo.S3Sandbox.Limits
+  alias LanternDemo.S3Sandbox.Storage
   alias LanternS3.Storage.S3
 
   # Presigned PUT lifetime — short, since the client uploads immediately.
   @put_expiry_seconds 120
 
   @impl true
-  def presign(%{s3: %S3.Config{} = s3, bucket: bucket, prefix: prefix}, entry, _opts) do
+  def presign(%{bucket: bucket, prefix: prefix}, entry, _opts) do
     %{filename: filename, content_type: content_type} = entry
     ext = filename |> Path.extname() |> String.trim_leading(".")
 
-    with {:ok, key} <- Limits.object_key(prefix, filename),
+    with {:ok, config} <- Storage.s3_config(),
+         {:ok, key} <- Limits.object_key(prefix, filename),
          :ok <- validate_type(ext, content_type),
          {:ok, canonical_type} <- Limits.content_type(ext),
          {:ok, url} <-
-           S3.presigned_put(s3, bucket, key,
+           S3.presigned_put(config, bucket, key,
              content_type: canonical_type,
              expires_in: @put_expiry_seconds
            ) do
       {:ok, %{uploader: "S3", key: key, url: url}}
+    else
+      {:error, :not_configured} -> {:error, "The upload sandbox isn't configured."}
+      other -> other
     end
   end
 
