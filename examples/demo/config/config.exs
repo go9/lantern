@@ -31,18 +31,20 @@ config :lantern_demo, LanternDemo.SandboxManager,
     s3: [max: 5, provider: LanternDemo.S3Sandbox.PrefixProvider]
   }
 
-# S3 upload sandbox (optional). Creds are scoped to ONE private bucket; sessions
-# isolate by prefix, so no bucket create/delete power lives in this app. Unset ⇒
-# the upload demo shows a "coming soon" state; the rest of the page is fine.
+# S3 upload sandbox (optional). Backed by a single flicker-managed bucket reached
+# through flicker's S3 gateway (storage.flickercloud.com) with a bucket-scoped
+# Flicker BucketCredential — no provider root key in this public app. Sessions
+# isolate by prefix. Unset ⇒ the upload demo shows a "coming soon" state; the
+# rest of the page is fine.
 config :ex_aws, json_codec: Jason
 
 config :ex_aws,
-  access_key_id: System.get_env("TIGRIS_ACCESS_KEY_ID"),
-  secret_access_key: System.get_env("TIGRIS_SECRET_ACCESS_KEY")
+  access_key_id: System.get_env("S3_ACCESS_KEY_ID"),
+  secret_access_key: System.get_env("S3_SECRET_ACCESS_KEY")
 
 config :ex_aws, :s3,
   scheme: "https://",
-  host: System.get_env("TIGRIS_ENDPOINT", "t3.storage.dev"),
-  region: System.get_env("TIGRIS_REGION", "auto")
+  host: System.get_env("S3_ENDPOINT", "storage.flickercloud.com"),
+  region: System.get_env("S3_REGION", "auto")
 
 config :lantern_demo, :s3_sandbox_bucket, System.get_env("S3_SANDBOX_BUCKET")

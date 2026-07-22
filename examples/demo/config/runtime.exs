@@ -31,16 +31,17 @@ if config_env() == :prod do
     flicker_database_id:
       System.get_env("FLICKER_DATABASE_ID") || raise("FLICKER_DATABASE_ID required")
 
-  # S3 upload sandbox (optional). Creds scoped to ONE private bucket; sessions
-  # isolate by prefix. Unset ⇒ the upload demo shows a "coming soon" state.
+  # S3 upload sandbox (optional). Backed by a flicker-managed bucket via flicker's
+  # S3 gateway with a bucket-scoped Flicker BucketCredential — no root key here.
+  # Sessions isolate by prefix. Unset ⇒ the upload demo shows "coming soon".
   config :ex_aws,
-    access_key_id: System.get_env("TIGRIS_ACCESS_KEY_ID"),
-    secret_access_key: System.get_env("TIGRIS_SECRET_ACCESS_KEY")
+    access_key_id: System.get_env("S3_ACCESS_KEY_ID"),
+    secret_access_key: System.get_env("S3_SECRET_ACCESS_KEY")
 
   config :ex_aws, :s3,
     scheme: "https://",
-    host: System.get_env("TIGRIS_ENDPOINT", "t3.storage.dev"),
-    region: System.get_env("TIGRIS_REGION", "auto")
+    host: System.get_env("S3_ENDPOINT", "storage.flickercloud.com"),
+    region: System.get_env("S3_REGION", "auto")
 
   config :lantern_demo, :s3_sandbox_bucket, System.get_env("S3_SANDBOX_BUCKET")
 end
