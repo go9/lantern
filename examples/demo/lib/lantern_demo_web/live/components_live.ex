@@ -227,16 +227,23 @@ defmodule LanternDemoWeb.ComponentsLive do
           collapse control at the sidebar foot persists per <code>id</code>.
         </p>
         <div class="docs-demo">
-          <div class="docs-navdemo">
-            <Layout.nav_group label="Workspace">
-              <Layout.nav_item label="Dashboard" icon="chart-bar" href="#" active />
-              <Layout.nav_item label="Buckets" icon="cloud" href="#" />
-              <Layout.nav_item label="Settings" icon="squares-2x2" href="#" />
-            </Layout.nav_group>
+          <div class="docs-appshell-frame">
+            <div class="docs-appshell-frame-bar" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <iframe
+              src="/preview/app-shell"
+              title="Live app_shell preview"
+              loading="lazy"
+              class="docs-appshell-iframe"
+            >
+            </iframe>
           </div>
           <p class="docs-caption">
-            Live <code>nav_item</code>s — icon, label, active state. The top bar and the
-            persisted collapse come from the surrounding <code>app_shell</code>.
+            A real, interactive <code>&lt;.app_shell&gt;</code> — brand · breadcrumb ·
+            actions over a collapsible sidebar and a main column. Rendered in an iframe
+            because <code>app_shell</code> is <code>position: fixed</code>; the collapse
+            control at the sidebar foot works here too.
           </p>
         </div>
         <.code_block id="code-app-shell" code={@snippets["app-shell"]} />
@@ -1862,6 +1869,16 @@ defmodule LanternDemoWeb.ComponentsLive do
           flex-direction: column; gap: .875rem; }
         .docs-navdemo { max-width: 15rem; border: 1px solid var(--lantern-border);
           border-radius: var(--lantern-radius-md); padding: .6rem; background: var(--lantern-surface); }
+        .docs-appshell-frame { border: 1px solid var(--lantern-border);
+          border-radius: var(--lantern-radius-md); overflow: hidden;
+          background: var(--lantern-surface); box-shadow: var(--lantern-shadow); }
+        .docs-appshell-frame-bar { display: flex; align-items: center; gap: .4rem;
+          padding: .55rem .75rem; border-bottom: 1px solid var(--lantern-border);
+          background: var(--lantern-surface-sunken); }
+        .docs-appshell-frame-bar span { width: .625rem; height: .625rem; border-radius: 999px;
+          background: var(--lantern-border-strong); }
+        .docs-appshell-iframe { display: block; width: 100%; height: 30rem; border: 0;
+          background: var(--lantern-surface); }
         .docs-caption { font-size: .8125rem; color: var(--lantern-fg-muted); margin: 0; }
         .docs-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
         .docs-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
