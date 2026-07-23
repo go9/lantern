@@ -150,11 +150,15 @@ defmodule LanternDemoWeb.S3DemoLive do
   def handle_info({:s3_upload_event, :upload, %{keys: keys}}, socket) do
     case socket.assigns.sandbox do
       {:active, session} ->
-        # Side effect only: delete anything oversize/wrong-type that slipped past.
-        # The Explorer re-lists itself on upload, so we must NOT send_update it here
-        # (that would re-emit :upload → this handler → an infinite loop).
+        # Delete anything oversize/wrong-type that slipped past the client. The
+        # sweep's HEADs also confirm each object exists, so refresh the listing
+        # afterwards: the Explorer's own re-list on :uploaded fires the instant the
+        # PUT completes and can race ahead of LIST consistency, leaving the browser
+        # empty. `refresh:` re-lists WITHOUT re-emitting :upload (which would loop
+        # straight back into this handler).
         survivors = sweep_completed(session, keys)
         merged = merge_files(session.files, survivors)
+        send_update(LanternS3.Explorer, id: "s3-sandbox-explorer", refresh: true)
         {:noreply, assign(socket, sandbox: {:active, %{session | files: merged}})}
 
       _ ->
