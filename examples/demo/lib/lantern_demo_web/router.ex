@@ -23,6 +23,7 @@ defmodule LanternDemoWeb.Router do
     live("/preview/app-shell", AppShellPreviewLive)
     live("/components/data-table", DataTableDemo)
     live("/components/theming", ThemingLive)
+    live("/component-batch-preview", ComponentBatchPreviewLive)
     live("/components/:slug", ComponentsLive, :show)
   end
 end
