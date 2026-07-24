@@ -9,7 +9,9 @@ defmodule LanternDemoWeb.ComponentsLive do
   use Phoenix.LiveView
 
   alias LanternUI.Charts
+  alias LanternUI.Components.Accordion
   alias LanternUI.Components.Alert
+  alias LanternUI.Components.AlertDialog
   alias LanternUI.Components.Autocomplete
   alias LanternUI.Components.Badge
   alias LanternUI.Components.Breadcrumb
@@ -31,6 +33,8 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Select
   alias LanternUI.Components.Separator
   alias LanternUI.Components.Sheet
+  alias LanternUI.Components.Skeleton
+  alias LanternUI.Components.Stat
   alias LanternUI.Components.Switch
   alias LanternUI.Components.Table
   alias LanternUI.Components.Tabs
@@ -42,6 +46,23 @@ defmodule LanternDemoWeb.ComponentsLive do
 
   @labels Map.new(Enum.flat_map(@groups, fn {_g, items} -> items end))
   @default_slug "button"
+
+  @catalog [
+    %{
+      group: "Nintendo 64",
+      label: "The Legend of Zelda: Ocarina of Time",
+      value: "zelda-ocarina"
+    },
+    %{group: "Nintendo 64", label: "The Legend of Zelda: Majora's Mask", value: "zelda-majora"},
+    %{group: "Nintendo 64", label: "Super Mario 64", value: "super-mario-64"},
+    %{
+      group: "Nintendo Switch",
+      label: "The Legend of Zelda: Breath of the Wild",
+      value: "zelda-botw"
+    },
+    %{group: "Nintendo Switch", label: "Metroid Dread", value: "metroid-dread"},
+    %{group: "Nintendo Switch", label: "Animal Crossing: New Horizons", value: "animal-crossing"}
+  ]
 
   # slug -> the component functions whose props/slots to document (introspected)
   @api_map %{
@@ -56,11 +77,13 @@ defmodule LanternDemoWeb.ComponentsLive do
     "icon" => [{Icon, :icon}],
     "input" => [{Form, :input}],
     "autocomplete" => [{Autocomplete, :autocomplete}],
+    "accordion" => [{Accordion, :accordion}, {Accordion, :accordion_item}],
     "datetime-field" => [{DatetimeField, :datetime_field}],
     "calendar" => [{Calendar, :calendar}],
     "date-picker" => [{DatePicker, :date_picker}, {DatePicker, :datetime_picker}],
     "checkbox" => [{Checkbox, :checkbox}],
     "modal" => [{Modal, :modal}],
+    "alert-dialog" => [{AlertDialog, :alert_dialog}],
     "dropdown" => [
       {Dropdown, :dropdown},
       {Dropdown, :dropdown_button},
@@ -73,6 +96,8 @@ defmodule LanternDemoWeb.ComponentsLive do
     "textarea" => [{Textarea, :textarea}],
     "alert" => [{Alert, :alert}],
     "loading" => [{Loading, :loading}],
+    "skeleton" => [{Skeleton, :skeleton}],
+    "stat" => [{Stat, :stat_card}, {Stat, :stat_grid}],
     "separator" => [{Separator, :separator}],
     "tooltip" => [{Tooltip, :tooltip}],
     "toast" => [{Toast, :toast_group}],
@@ -172,6 +197,8 @@ defmodule LanternDemoWeb.ComponentsLive do
        snippets: @snippets,
        demo_tab: "one",
        toast_placement: "top-right",
+       catalog_options: [],
+       alert_dialog_status: nil,
        area: area,
        line: line,
        bars: [
@@ -210,6 +237,19 @@ defmodule LanternDemoWeb.ComponentsLive do
   def handle_event("demo_toast", %{"kind" => kind}, socket) do
     {:noreply,
      LanternUI.send_toast(socket, kind, "This is a #{kind} toast", title: String.capitalize(kind))}
+  end
+
+  def handle_event("search_catalog", %{"query" => query}, socket) do
+    {:noreply, assign(socket, :catalog_options, catalog_options(query))}
+  end
+
+  def handle_event("confirm_demo_revoke", _params, socket) do
+    socket =
+      socket
+      |> assign(:alert_dialog_status, "Demo key revoked — no real credential was changed.")
+      |> LanternUI.close_dialog("alert-dialog-demo")
+
+    {:noreply, socket}
   end
 
   def render(assigns) do
@@ -449,20 +489,20 @@ defmodule LanternDemoWeb.ComponentsLive do
       <article :if={@current == "autocomplete"} class="docs-body">
         <h1>Autocomplete</h1>
         <p>
-          Free-text combobox that filters a provided <code>options</code> list as you
-          type — client-side, keyboard-navigable, with a hidden value input for form
-          submission. Mirrors Fluxon's autocomplete (static-options case).
+          Accessible static or LiveView-backed search. Lantern owns the combobox,
+          keyboard selection, and presentation; your LiveView owns remote querying,
+          authorization, and result order. The public API mirrors Fluxon 2.3.1.
         </p>
         <.demo_section
-          title="Filter as you type"
-          description="options as {label, value} tuples or bare values; selection fills the hidden input."
+          title="Static filtering"
+          description="Static options filter in the browser; selection fills the hidden form input."
           code={~S'''
           <.autocomplete
             id="ac-fruit"
             name="fruit"
             label="Fruit"
             placeholder="Search fruit…"
-            options={["Apple", "Apricot", "Banana", "Blackberry", "Cherry", "Grape", "Mango", "Orange"]}
+            options={["Apple", "Apricot", "Banana", "Blackberry", "Cherry", "Grape"]}
           />
           '''}
         >
@@ -471,8 +511,128 @@ defmodule LanternDemoWeb.ComponentsLive do
             name="fruit"
             label="Fruit"
             placeholder="Search fruit…"
-            options={["Apple", "Apricot", "Banana", "Blackberry", "Cherry", "Grape", "Mango", "Orange"]}
+            options={["Apple", "Apricot", "Banana", "Blackberry", "Cherry", "Grape"]}
           />
+        </.demo_section>
+
+        <.demo_section
+          title="Server-backed search"
+          description="Type at least two characters (try “zel”). The LiveView filters server-owned data and patches grouped, rich results back into the same focused combobox."
+          code={~S'''
+          # LiveView
+          def handle_event("search_catalog", %{"query" => query}, socket) do
+            {:noreply, assign(socket, :catalog_options, search_catalog(query))}
+          end
+
+          <.autocomplete
+            id="ac-catalog"
+            name="game_id"
+            label="Game catalog"
+            options={@catalog_options}
+            on_search="search_catalog"
+            search_threshold={2}
+            debounce={250}
+            clearable
+            no_results_text="No games match %{query}"
+          >
+            <:option :let={{label, value}}>
+              <span>{label}</span><code>{value}</code>
+            </:option>
+          </.autocomplete>
+          '''}
+        >
+          <Autocomplete.autocomplete
+            id="ac-catalog"
+            name="game_id"
+            label="Game catalog"
+            description="Server-backed, grouped results with rich option rows."
+            placeholder="Search the catalog…"
+            options={@catalog_options}
+            on_search="search_catalog"
+            search_threshold={2}
+            debounce={250}
+            clearable
+            no_results_text="No games match %{query}"
+          >
+            <:header>Results from the demo LiveView</:header>
+            <:option :let={{label, value}}>
+              <span class="docs-option-rich">
+                <span>{label}</span>
+                <code>{value}</code>
+              </span>
+            </:option>
+            <:footer>Fixed demo data; production search remains caller-owned.</:footer>
+          </Autocomplete.autocomplete>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "accordion"} class="docs-body">
+        <h1>Accordion</h1>
+        <p>
+          WAI-ARIA disclosure groups with Fluxon 2.3.1's
+          <code>accordion/1</code> + <code>accordion_item/1</code> composition API.
+          Arrow keys move between headers; Enter and Space toggle the focused item.
+        </p>
+        <.demo_section
+          title="Required open item"
+          description="Single-open mode with prevent_all_closed keeps one answer available at all times."
+          code={~S'''
+          <.accordion id="faq" prevent_all_closed>
+            <.accordion_item id="faq-search" expanded>
+              <:header>Who owns async search?</:header>
+              <:panel>The LiveView owns querying and authorization.</:panel>
+            </.accordion_item>
+            <.accordion_item id="faq-state">
+              <:header>Does state survive patches?</:header>
+              <:panel>Yes. Hook-owned state is restored after LiveView patches.</:panel>
+            </.accordion_item>
+          </.accordion>
+          '''}
+        >
+          <Accordion.accordion id="faq" prevent_all_closed>
+            <Accordion.accordion_item id="faq-search" expanded>
+              <:header>Who owns async search?</:header>
+              <:panel>
+                The LiveView owns querying, authorization, and ordering; the component owns interaction.
+              </:panel>
+            </Accordion.accordion_item>
+            <Accordion.accordion_item id="faq-state">
+              <:header>Does state survive LiveView patches?</:header>
+              <:panel>Yes. Open state and focused-header position are restored after patches.</:panel>
+            </Accordion.accordion_item>
+            <Accordion.accordion_item id="faq-keyboard">
+              <:header>Which keys are supported?</:header>
+              <:panel>Enter, Space, Arrow Up/Down, Home, and End follow the APG pattern.</:panel>
+            </Accordion.accordion_item>
+          </Accordion.accordion>
+        </.demo_section>
+
+        <.demo_section
+          title="Multiple open"
+          description="multiple allows independent disclosure panels; icon={false} supports a custom visual treatment."
+          code={~S'''
+          <.accordion id="details" multiple>
+            <.accordion_item id="details-api" expanded>
+              <:header>Public API</:header>
+              <:panel>Fluxon-compatible container and item functions.</:panel>
+            </.accordion_item>
+            <.accordion_item id="details-license" expanded icon={false}>
+              <:header>Implementation</:header>
+              <:panel>Independent, clean-room Lantern behavior.</:panel>
+            </.accordion_item>
+          </.accordion>
+          '''}
+        >
+          <Accordion.accordion id="details" multiple>
+            <Accordion.accordion_item id="details-api" expanded>
+              <:header>Public API</:header>
+              <:panel>Fluxon-compatible container and item functions.</:panel>
+            </Accordion.accordion_item>
+            <Accordion.accordion_item id="details-license" expanded icon={false}>
+              <:header>Implementation</:header>
+              <:panel>Independent, clean-room Lantern behavior.</:panel>
+            </Accordion.accordion_item>
+          </Accordion.accordion>
         </.demo_section>
       </article>
 
@@ -692,45 +852,101 @@ defmodule LanternDemoWeb.ComponentsLive do
       <article :if={@current == "modal"} class="docs-body">
         <h1>Modal</h1>
         <p>
-          Dialog on the shared overlay runtime: focus trap, <kbd>Esc</kbd>/outside dismissal,
-          token-driven fade. Open from the client with <code>LanternUI.open_dialog/1</code> or
-          the server with <code>LanternUI.open_dialog(socket, id)</code>.
+          General-purpose dialog content on the shared overlay runtime: focus trap,
+          <kbd>Esc</kbd>/outside dismissal, optional close button, and token-driven fade.
+          Use it for forms, details, and reversible workflows.
         </p>
         <.demo_section
-          title="Basic"
-          description="Open with open_dialog/1; close with close_dialog/1 or Esc / outside click."
+          title="Edit workspace details"
+          description="A normal modal can contain arbitrary form content and dismisses on Esc, close button, or outside click."
           code={~S'''
-          <.button phx-click={LanternUI.open_dialog("demo-modal")}>Open modal</.button>
+          <.button phx-click={LanternUI.open_dialog("workspace-modal")}>Edit workspace</.button>
 
-          <.modal id="demo-modal">
-            <h2>Delete 3 objects?</h2>
-            <p>This action cannot be undone.</p>
-            <.button phx-click={LanternUI.close_dialog("demo-modal")}>Cancel</.button>
-            <.button variant="solid" color="danger" phx-click={LanternUI.close_dialog("demo-modal")}>
-              Delete
-            </.button>
+          <.modal id="workspace-modal">
+            <h2>Edit workspace</h2>
+            <.input name="workspace_name" label="Workspace name" value="Acme Operations" />
+            <.button phx-click={LanternUI.close_dialog("workspace-modal")}>Cancel</.button>
+            <.button variant="solid" phx-click={LanternUI.close_dialog("workspace-modal")}>Save</.button>
           </.modal>
           '''}
         >
           <div class="docs-row">
-            <Button.button phx-click={LanternUI.open_dialog("demo-modal")}>Open modal</Button.button>
+            <Button.button phx-click={LanternUI.open_dialog("demo-modal")}>
+              Edit workspace…
+            </Button.button>
           </div>
           <Modal.modal id="demo-modal">
-            <h2 style="margin: 0 0 .4rem; font-size: 1.05rem;">Delete 3 objects?</h2>
-            <p style="margin: 0 0 1rem; color: var(--lantern-fg-muted); font-size: .85rem;">
-              This action cannot be undone.
-            </p>
-            <div style="display: flex; gap: .5rem; justify-content: flex-end;">
+            <h2 style="margin: 0 0 1rem; font-size: 1.05rem;">Edit workspace details</h2>
+            <Form.input
+              id="modal-workspace-name"
+              name="workspace_name"
+              label="Workspace name"
+              value="Acme Operations"
+            />
+            <div style="display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem;">
               <Button.button phx-click={LanternUI.close_dialog("demo-modal")}>Cancel</Button.button>
-              <Button.button
-                variant="solid"
-                color="danger"
-                phx-click={LanternUI.close_dialog("demo-modal")}
-              >
-                Delete
+              <Button.button variant="solid" phx-click={LanternUI.close_dialog("demo-modal")}>
+                Save changes
               </Button.button>
             </div>
           </Modal.modal>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "alert-dialog"} class="docs-body">
+        <h1>Alert dialog</h1>
+        <p>
+          A deliberately constrained confirmation surface for irreversible or high-impact
+          choices. Unlike a general modal, it requires consequence copy plus cancel/action
+          controls, focuses Cancel first, hides the generic close button, and ignores outside clicks.
+        </p>
+        <.demo_section
+          title="Revoke a production credential"
+          description="The consequence is concrete and the destructive action is visually singular. This demo never changes a real credential."
+          code={~S'''
+          <.button phx-click={LanternUI.open_dialog("revoke-key")}>Revoke key…</.button>
+
+          <.alert_dialog id="revoke-key">
+            <:title>Revoke the production API key?</:title>
+            <:description>Requests using pk_live_7K… will fail immediately.</:description>
+            <:cancel>
+              <.button phx-click={LanternUI.close_dialog("revoke-key")}>Keep key</.button>
+            </:cancel>
+            <:action>
+              <.button color="danger" variant="solid" phx-click="revoke_key">Revoke key</.button>
+            </:action>
+          </.alert_dialog>
+          '''}
+        >
+          <div class="docs-row">
+            <Button.button phx-click={LanternUI.open_dialog("alert-dialog-demo")}>
+              Revoke production key…
+            </Button.button>
+            <p
+              :if={@alert_dialog_status}
+              id="alert-dialog-status"
+              class="docs-confirm-status"
+              role="status"
+            >
+              {@alert_dialog_status}
+            </p>
+          </div>
+          <AlertDialog.alert_dialog id="alert-dialog-demo">
+            <:title>Revoke the production API key?</:title>
+            <:description>
+              Requests using <code>pk_live_7K…</code> will fail immediately. This demo changes no real credential.
+            </:description>
+            <:cancel>
+              <Button.button phx-click={LanternUI.close_dialog("alert-dialog-demo")}>
+                Keep key
+              </Button.button>
+            </:cancel>
+            <:action>
+              <Button.button color="danger" variant="solid" phx-click="confirm_demo_revoke">
+                Revoke key
+              </Button.button>
+            </:action>
+          </AlertDialog.alert_dialog>
         </.demo_section>
       </article>
 
@@ -920,6 +1136,57 @@ defmodule LanternDemoWeb.ComponentsLive do
             <Badge.badge size="md" color="success">md</Badge.badge>
             <Badge.badge size="lg" color="danger">lg</Badge.badge>
           </div>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "stat"} class="docs-body">
+        <h1>Stat cards</h1>
+        <p>
+          Compact summary metrics extracted from the data-table overview. Use
+          <code>stat_card/1</code> alone or compose a responsive group with
+          <code>stat_grid/1</code>. Callers own calculations, formatting, trends, and
+          navigation state.
+        </p>
+        <.demo_section
+          title="Standalone metric"
+          description="Without href the card is a non-interactive div; subtitle adds quiet context."
+          code={~S'''
+          <.stat_card
+            label="Queued jobs"
+            value={18}
+            subtitle="4 require attention"
+            icon="hero-inbox"
+          />
+          '''}
+        >
+          <div style="max-width: 18rem;">
+            <Stat.stat_card
+              label="Queued jobs"
+              value={18}
+              subtitle="4 require attention"
+              icon="hero-inbox"
+            />
+          </div>
+        </.demo_section>
+
+        <.demo_section
+          title="Responsive grid"
+          description="Cards share a minimum basis, wrap without caller breakpoints, and only become links when href is present."
+          code={~S'''
+          <.stat_grid aria-label="Order summary">
+            <:stat label="Open orders" value={42} />
+            <:stat label="Shipped" value={128} href={~p"/orders?status=shipped"} />
+            <:stat label="Long value" value="pending-warehouse-confirmation-2026-07" />
+            <:stat label="Revenue" value="$12,482.19" subtitle="Last 30 days" />
+          </.stat_grid>
+          '''}
+        >
+          <Stat.stat_grid aria-label="Order summary">
+            <:stat label="Open orders" value={42} />
+            <:stat label="Shipped" value={128} href="/components/data-table" />
+            <:stat label="Long value" value="pending-warehouse-confirmation-2026-07" />
+            <:stat label="Revenue" value="$12,482.19" subtitle="Last 30 days" />
+          </Stat.stat_grid>
         </.demo_section>
       </article>
 
@@ -1541,6 +1808,53 @@ defmodule LanternDemoWeb.ComponentsLive do
         </.demo_section>
       </article>
 
+      <article :if={@current == "skeleton"} class="docs-body">
+        <h1>Skeleton</h1>
+        <p>
+          A decorative, dependency-free loading placeholder. Match the geometry of the
+          content it replaces, hide the placeholder from assistive technology, and put
+          <code>aria-busy="true"</code> plus an accessible label on the surrounding region.
+          Animation is disabled automatically when reduced motion is requested.
+        </p>
+        <.demo_section
+          title="Profile loading state"
+          description="Compose the same primitive into avatar, title, metadata, and body shapes."
+          code={~S'''
+          <section aria-busy="true" aria-label="Loading profile">
+            <.skeleton style="width: 3rem; height: 3rem; border-radius: 999px;" />
+            <.skeleton style="width: 12rem; height: 1rem;" />
+            <.skeleton style="width: 8rem; height: .75rem;" />
+            <.skeleton style="height: 5rem;" />
+          </section>
+          '''}
+        >
+          <section class="docs-skeleton-card" aria-busy="true" aria-label="Loading profile">
+            <Skeleton.skeleton class="docs-skeleton-avatar" />
+            <div class="docs-skeleton-copy">
+              <Skeleton.skeleton style="width: 12rem; height: 1rem;" />
+              <Skeleton.skeleton style="width: 8rem; height: .75rem;" />
+            </div>
+            <Skeleton.skeleton class="docs-skeleton-block" />
+          </section>
+        </.demo_section>
+
+        <.demo_section
+          title="Inline geometry"
+          description="class and style are intentionally the only geometry controls; content and timing remain caller-owned."
+          code={~S'''
+          <.skeleton />
+          <.skeleton style="width: 65%;" />
+          <.skeleton style="width: 35%; height: .75rem;" />
+          '''}
+        >
+          <div class="docs-skeleton-lines" aria-busy="true" aria-label="Loading article summary">
+            <Skeleton.skeleton />
+            <Skeleton.skeleton style="width: 65%;" />
+            <Skeleton.skeleton style="width: 35%; height: .75rem;" />
+          </div>
+        </.demo_section>
+      </article>
+
       <article :if={@current == "separator"} class="docs-body">
         <h1>Separator</h1>
         <p>Visual divider — horizontal, labeled, or vertical.</p>
@@ -1882,6 +2196,15 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-caption { font-size: .8125rem; color: var(--lantern-fg-muted); margin: 0; }
         .docs-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
         .docs-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
+        .docs-option-rich { display: flex; align-items: baseline; justify-content: space-between;
+          gap: 1rem; width: 100%; min-width: 0; }
+        .docs-option-rich code { color: var(--lantern-fg-subtle); font-size: .6875rem; }
+        .docs-confirm-status { margin: 0; color: var(--lantern-success); font-size: .8125rem; }
+        .docs-skeleton-card { display: grid; grid-template-columns: auto minmax(0, 1fr);
+          gap: .75rem; align-items: center; width: 100%; }
+        .docs-skeleton-avatar { width: 3rem; height: 3rem; border-radius: 999px; grid-row: 1; }
+        .docs-skeleton-copy, .docs-skeleton-lines { display: grid; gap: .55rem; min-width: 0; }
+        .docs-skeleton-block { height: 5rem; grid-column: 1 / -1; }
         .docs-icons { gap: .875rem; }
         .docs-icon-cell { display: inline-flex; flex-direction: column; align-items: center;
           gap: .3rem; font-size: 1.1rem; color: var(--lantern-fg); }
@@ -1972,6 +2295,25 @@ defmodule LanternDemoWeb.ComponentsLive do
       class="docs-codeblock"
     />
     """
+  end
+
+  defp catalog_options(query) do
+    normalized = query |> String.trim() |> String.downcase()
+
+    if String.length(normalized) < 2 do
+      []
+    else
+      @catalog
+      |> Enum.filter(fn item ->
+        String.contains?(String.downcase(item.label), normalized) or
+          String.contains?(item.value, normalized)
+      end)
+      |> Enum.group_by(& &1.group)
+      |> Enum.sort_by(fn {group, _items} -> group end)
+      |> Enum.map(fn {group, items} ->
+        {group, Enum.map(items, &{&1.label, &1.value})}
+      end)
+    end
   end
 
   defp slugify(title) do
