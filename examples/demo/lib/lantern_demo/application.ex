@@ -14,6 +14,7 @@ defmodule LanternDemo.Application do
     children = [
       {Phoenix.PubSub, name: LanternDemo.PubSub},
       LanternDemo.SandboxManager,
+      LanternDemo.S3Sandbox.Reaper,
       LanternDemoWeb.Endpoint
     ]
 

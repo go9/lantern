@@ -17,7 +17,42 @@ config :phoenix, :json_library, Jason
 # Override TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY in production.
 config :lantern_demo,
   turnstile_site_key: System.get_env("TURNSTILE_SITE_KEY", "1x00000000000000000000AA"),
-  turnstile_secret_key: System.get_env("TURNSTILE_SECRET_KEY", "1x0000000000000000000000000000000AA"),
+  turnstile_secret_key:
+    System.get_env("TURNSTILE_SECRET_KEY", "1x0000000000000000000000000000000AA"),
   # Flicker branch sandbox — omit in local dev to fall back to raw Postgres.
   flicker_api_key: System.get_env("FLICKER_API_KEY"),
   flicker_database_id: System.get_env("FLICKER_DATABASE_ID")
+
+# Both demos share the slot+queue admission engine: 5 concurrent sessions per
+# pool with a FIFO wait queue.
+config :lantern_demo, LanternDemo.SandboxManager,
+  pools: %{
+    db: [max: 5, provider: LanternDemo.Sandbox.DbProvider],
+    # S3 upload sessions are short so slots recycle fast (upload → browse → done);
+    # the DB demo keeps the manager-wide default.
+    s3: [max: 5, provider: LanternDemo.S3Sandbox.PrefixProvider, ttl_seconds: 60]
+  }
+
+# S3 upload sandbox (optional). Backed by a single flicker-managed bucket reached
+# through flicker's S3 gateway (storage.flickercloud.com) with a bucket-scoped
+# Flicker BucketCredential — no provider root key in this public app. Sessions
+# isolate by prefix. Unset ⇒ the upload demo shows a "coming soon" state; the
+# rest of the page is fine.
+config :ex_aws, json_codec: Jason
+
+# ExAws' default HTTP client is hackney, which isn't a dep here — use the Req
+# adapter shipped in ex_aws (we already depend on :req). Without this, every
+# server-side S3 call (Explorer listing, completion head-sweep, reaper
+# delete_prefix) crashes with "ExAws.Request.Hackney is not available".
+config :ex_aws, http_client: ExAws.Request.Req
+
+config :ex_aws,
+  access_key_id: System.get_env("S3_ACCESS_KEY_ID"),
+  secret_access_key: System.get_env("S3_SECRET_ACCESS_KEY")
+
+config :ex_aws, :s3,
+  scheme: "https://",
+  host: System.get_env("S3_ENDPOINT", "storage.flickercloud.com"),
+  region: System.get_env("S3_REGION", "auto")
+
+config :lantern_demo, :s3_sandbox_bucket, System.get_env("S3_SANDBOX_BUCKET")

@@ -17,7 +17,10 @@ defmodule LanternDemoWeb.Router do
     pipe_through(:browser)
 
     live("/", DemoLive, :index)
+    live("/storage", S3DemoLive, :index)
+    live("/livecode", LiveCodeDemoLive, :index)
     live("/components", ComponentsLive, :index)
+    live("/preview/app-shell", AppShellPreviewLive)
     live("/components/data-table", DataTableDemo)
     live("/components/theming", ThemingLive)
     live("/components/:slug", ComponentsLive, :show)

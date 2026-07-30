@@ -3,6 +3,7 @@ import { LiveSocket } from "/js/phoenix_live_view.esm.js"
 import { LanternGrid } from "/lantern/hooks.js"
 import { LiveCode } from "/livecode/livecode.js"
 import LanternUIHooks from "/lantern_ui_hooks.js"
+import { S3, LanternS3Download } from "/lantern_s3_uploader.js"
 
 const TurnstileWidget = {
   mounted() {
@@ -26,6 +27,7 @@ const TurnstileWidget = {
 }
 
 const THEME_STORAGE_KEY = "lui-theme"
+const SIDEBAR_SCROLL_STORAGE_KEY = "lui-demo-sidebar-scroll"
 
 const DocsExample = {
   mounted() {
@@ -52,12 +54,48 @@ const DocsExample = {
 }
 
 const DemoChrome = {
-  // Client-side theme + density toggles for the whole demo shell. State lives
-  // in localStorage and is re-applied after every LiveView patch (morphdom
-  // strips client-set classes/attrs), so the toggles work uniformly on every
-  // page and persist across navigation — like a real app's appearance settings.
+  // Theme, density, and sidebar position belong to the persistent demo shell,
+  // not an individual component page. Re-apply them after LiveView patches and
+  // full route changes so navigating a long catalog never loses the reader's place.
   shell() {
     return document.getElementById(this.el.dataset.shell)
+  },
+
+  sidebarNav() {
+    return this.shell()?.querySelector(".lui-app-nav")
+  },
+
+  saveSidebarScroll() {
+    const nav = this.sidebarNavEl || this.sidebarNav()
+    if (!nav) return
+    try {
+      sessionStorage.setItem(
+        SIDEBAR_SCROLL_STORAGE_KEY,
+        JSON.stringify({ top: nav.scrollTop, left: nav.scrollLeft })
+      )
+    } catch (_) {}
+  },
+
+  restoreSidebarScroll() {
+    requestAnimationFrame(() => {
+      const nav = this.sidebarNav()
+      if (!nav) return
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(SIDEBAR_SCROLL_STORAGE_KEY) || "null")
+        if (saved) {
+          nav.scrollTop = Number(saved.top) || 0
+          nav.scrollLeft = Number(saved.left) || 0
+        }
+      } catch (_) {}
+    })
+  },
+
+  bindSidebarScroll() {
+    const nav = this.sidebarNav()
+    if (nav === this.sidebarNavEl) return
+    this.sidebarNavEl?.removeEventListener("scroll", this.onSidebarScroll)
+    this.sidebarNavEl = nav
+    this.sidebarNavEl?.addEventListener("scroll", this.onSidebarScroll, { passive: true })
   },
 
   restore() {
@@ -94,6 +132,9 @@ const DemoChrome = {
   mounted() {
     this.restore()
     this.apply()
+    this.onSidebarScroll = () => this.saveSidebarScroll()
+    this.bindSidebarScroll()
+    this.restoreSidebarScroll()
     this.el.addEventListener("click", (e) => {
       if (e.target.closest('[data-part="theme-toggle"]')) {
         this.state.theme = this.state.theme === "dark" ? "light" : "dark"
@@ -109,6 +150,13 @@ const DemoChrome = {
 
   updated() {
     this.apply()
+    this.bindSidebarScroll()
+    this.restoreSidebarScroll()
+  },
+
+  destroyed() {
+    this.saveSidebarScroll()
+    this.sidebarNavEl?.removeEventListener("scroll", this.onSidebarScroll)
   },
 }
 
@@ -148,7 +196,8 @@ const DemoTheming = {
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
 const liveSocket = new LiveSocket("/live", Socket, {
-  hooks: { ...LanternUIHooks, LanternGrid, LiveCode, TurnstileWidget, DemoTheming, DemoChrome, DocsExample },
+  hooks: { ...LanternUIHooks, LanternGrid, LiveCode, LanternS3Download, TurnstileWidget, DemoTheming, DemoChrome, DocsExample },
+  uploaders: { S3 },
   params: { _csrf_token: csrfToken },
 })
 

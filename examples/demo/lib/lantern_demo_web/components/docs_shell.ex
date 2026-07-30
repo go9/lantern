@@ -27,7 +27,8 @@ defmodule LanternDemoWeb.DocsShell do
        {"pagination", "Pagination"},
        {"tabs", "Tabs"},
        {"select", "Select"},
-       {"badge", "Badge"}
+       {"badge", "Badge"},
+       {"stat", "Stat cards"}
      ]},
     {"Components",
      [
@@ -35,11 +36,13 @@ defmodule LanternDemoWeb.DocsShell do
        {"icon", "Icon"},
        {"input", "Input"},
        {"autocomplete", "Autocomplete"},
+       {"accordion", "Accordion"},
        {"datetime-field", "Datetime field"},
        {"calendar", "Calendar"},
        {"date-picker", "Date & time pickers"},
        {"checkbox", "Checkbox"},
        {"modal", "Modal"},
+       {"alert-dialog", "Alert dialog"},
        {"sheet", "Sheet"},
        {"dropdown", "Dropdown menu"},
        {"breadcrumb", "Breadcrumb"},
@@ -50,6 +53,7 @@ defmodule LanternDemoWeb.DocsShell do
        {"textarea", "Textarea"},
        {"alert", "Alert"},
        {"loading", "Loading"},
+       {"skeleton", "Skeleton"},
        {"separator", "Separator"},
        {"tooltip", "Tooltip"},
        {"toast", "Toast"}
@@ -109,7 +113,8 @@ defmodule LanternDemoWeb.DocsShell do
       <:sidebar>
         <Layout.nav_group label="Tools">
           <Layout.nav_item label="DB viewer" icon="circle-stack" navigate="/" active={@current == "db"} />
-          <Layout.nav_item label="S3 viewer — soon" icon="cloud" class="lui-nav-item-soon" />
+          <Layout.nav_item label="S3 viewer" icon="cloud" navigate="/storage" active={@current == "s3"} />
+          <Layout.nav_item label="LiveCode" icon="pencil-square" navigate="/livecode" active={@current == "livecode"} />
         </Layout.nav_group>
         <Layout.nav_group :for={{group, items} <- @groups} label={group}>
           <Layout.nav_item
@@ -150,14 +155,18 @@ defmodule LanternDemoWeb.DocsShell do
     "tabs" => "view-columns",
     "select" => "chevron-up-down",
     "badge" => "check-circle",
+    "stat" => "chart-bar",
     "button" => "cursor-arrow-rays",
     "icon" => "sparkles",
     "input" => "pencil-square",
+    "autocomplete" => "magnifying-glass",
+    "accordion" => "chevron-down",
     "datetime-field" => "clock",
     "calendar" => "calendar",
     "date-picker" => "calendar-days",
     "checkbox" => "check-circle",
     "modal" => "window",
+    "alert-dialog" => "exclamation-circle",
     "sheet" => "arrow-right",
     "dropdown" => "chevron-up-down",
     "breadcrumb" => "chevron-right",
@@ -167,6 +176,8 @@ defmodule LanternDemoWeb.DocsShell do
     "radio" => "check-circle",
     "textarea" => "pencil-square",
     "alert" => "exclamation-circle",
+    "loading" => "arrow-path",
+    "skeleton" => "view-columns",
     "separator" => "minus",
     "tooltip" => "information-circle",
     "toast" => "inbox",

@@ -27,8 +27,21 @@ if config_env() == :prod do
 
   # Flicker branch sandbox — required in prod so sandboxes use real Flicker branches.
   config :lantern_demo,
-    flicker_api_key:
-      System.get_env("FLICKER_API_KEY") || raise("FLICKER_API_KEY required"),
+    flicker_api_key: System.get_env("FLICKER_API_KEY") || raise("FLICKER_API_KEY required"),
     flicker_database_id:
       System.get_env("FLICKER_DATABASE_ID") || raise("FLICKER_DATABASE_ID required")
+
+  # S3 upload sandbox (optional). Backed by a flicker-managed bucket via flicker's
+  # S3 gateway with a bucket-scoped Flicker BucketCredential — no root key here.
+  # Sessions isolate by prefix. Unset ⇒ the upload demo shows "coming soon".
+  config :ex_aws,
+    access_key_id: System.get_env("S3_ACCESS_KEY_ID"),
+    secret_access_key: System.get_env("S3_SECRET_ACCESS_KEY")
+
+  config :ex_aws, :s3,
+    scheme: "https://",
+    host: System.get_env("S3_ENDPOINT", "storage.flickercloud.com"),
+    region: System.get_env("S3_REGION", "auto")
+
+  config :lantern_demo, :s3_sandbox_bucket, System.get_env("S3_SANDBOX_BUCKET")
 end

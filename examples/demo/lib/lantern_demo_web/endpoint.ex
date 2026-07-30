@@ -42,6 +42,13 @@ defmodule LanternDemoWeb.Endpoint do
   )
 
   plug(Plug.Static,
+    at: "/",
+    from: {:lantern_s3, "priv/static"},
+    gzip: false,
+    only: ~w(lantern_s3.css lantern_s3_uploader.js)
+  )
+
+  plug(Plug.Static,
     at: "/js",
     from: {:phoenix_live_view, "priv/static"},
     gzip: false,
