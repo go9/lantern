@@ -26,6 +26,12 @@ defmodule LanternDemo.MixProject do
     [
       {:lantern, path: "../.."},
       {:lantern_s3, github: "go9/lantern-s3"},
+      # lantern_s3 pins its own unpinned lantern_ui git dep with no override, which
+      # diverges from the pin in ../../mix.exs once both are in the tree. Mix
+      # requires the override on the actual top-level project (this one), not on
+      # the nested `lantern` path dependency where the other pin lives.
+      {:lantern_ui,
+       github: "go9/lantern-ui", ref: "f4e46ffebcb3e219514cb0bd01eb97487cb17d65", override: true},
       {:phoenix, "~> 1.8"},
       {:phoenix_live_view, "~> 1.1"},
       {:postgrex, "~> 0.17"},

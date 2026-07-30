@@ -39,6 +39,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Table
   alias LanternUI.Components.Tabs
   alias LanternUI.Components.Textarea
+  alias LanternUI.Components.Timeline
   alias LanternUI.Components.Toast
   alias LanternUI.Components.Tooltip
 
@@ -66,7 +67,12 @@ defmodule LanternDemoWeb.ComponentsLive do
 
   # slug -> the component functions whose props/slots to document (introspected)
   @api_map %{
-    "app-shell" => [{Layout, :app_shell}, {Layout, :nav_group}, {Layout, :nav_item}],
+    "app-shell" => [
+      {Layout, :app_shell},
+      {Layout, :nav_group},
+      {Layout, :nav_item},
+      {Layout, :breadcrumb_bar}
+    ],
     "navlist" => [{Navlist, :navlist}, {Navlist, :navheading}, {Navlist, :navlink}],
     "table" => [{Table, :table}, {Table, :table_head}, {Table, :table_row}],
     "pagination" => [{Pagination, :pagination}],
@@ -91,6 +97,7 @@ defmodule LanternDemoWeb.ComponentsLive do
     ],
     "breadcrumb" => [{Breadcrumb, :breadcrumb}],
     "empty-state" => [{EmptyState, :empty_state}],
+    "timeline" => [{Timeline, :timeline}, {Timeline, :timeline_item}],
     "switch" => [{Switch, :switch}],
     "radio" => [{Radio, :radio}],
     "textarea" => [{Textarea, :textarea}],
@@ -287,6 +294,149 @@ defmodule LanternDemoWeb.ComponentsLive do
           </p>
         </div>
         <.code_block id="code-app-shell" code={@snippets["app-shell"]} />
+        <.demo_section
+          title="Action bar"
+          description="breadcrumb_bar with a trail plus :actions: trail left, actions right, one bar instead of a stacked breadcrumb and title row."
+          code={~S'''
+          <.breadcrumb_bar>
+            <.breadcrumb>
+              <:item href="#">Workspace</:item>
+              <:item href="#">Projects</:item>
+              <:item current>enventory</:item>
+            </.breadcrumb>
+            <:actions label="Share">
+              <.button size="sm" variant="outline">Share</.button>
+            </:actions>
+            <:actions label="New deploy">
+              <.button size="sm">New deploy</.button>
+            </:actions>
+          </.breadcrumb_bar>
+          '''}
+        >
+          <Layout.breadcrumb_bar id="demo-bc-action-bar">
+            <Breadcrumb.breadcrumb>
+              <:item href="#">Workspace</:item>
+              <:item href="#">Projects</:item>
+              <:item current>enventory</:item>
+            </Breadcrumb.breadcrumb>
+            <:actions label="Share">
+              <Button.button size="sm" variant="outline">Share</Button.button>
+            </:actions>
+            <:actions label="New deploy">
+              <Button.button size="sm">New deploy</Button.button>
+            </:actions>
+          </Layout.breadcrumb_bar>
+        </.demo_section>
+        <.demo_section
+          title="Overflow"
+          description="Only the first :max_inline entries (default 2) are quick buttons; the rest fold into the More menu. The same fold applies to the quick buttons themselves as the bar narrows, so nothing becomes unreachable on small screens."
+          code={~S'''
+          <.breadcrumb_bar>
+            <.breadcrumb>
+              <:item href="#">Workspace</:item>
+              <:item current>foodfeed</:item>
+            </.breadcrumb>
+            <:actions label="Deploy">
+              <.button size="sm">Deploy</.button>
+            </:actions>
+            <:actions label="Logs" phx-click="logs">
+              <.button size="sm" variant="outline" phx-click="logs">Logs</.button>
+            </:actions>
+            <:actions label="Scale" phx-click="scale">
+              <.button size="sm" variant="outline" phx-click="scale">Scale</.button>
+            </:actions>
+            <:actions label="Rollback" phx-click="rollback">
+              <.button size="sm" variant="outline" phx-click="rollback">Rollback</.button>
+            </:actions>
+            <:actions label="Settings" phx-click="settings">
+              <.button size="sm" variant="outline" phx-click="settings">Settings</.button>
+            </:actions>
+          </.breadcrumb_bar>
+          '''}
+        >
+          <Layout.breadcrumb_bar id="demo-bc-overflow">
+            <Breadcrumb.breadcrumb>
+              <:item href="#">Workspace</:item>
+              <:item current>foodfeed</:item>
+            </Breadcrumb.breadcrumb>
+            <:actions label="Deploy">
+              <Button.button size="sm">Deploy</Button.button>
+            </:actions>
+            <:actions label="Logs" phx-click="logs">
+              <Button.button size="sm" variant="outline" phx-click="logs">Logs</Button.button>
+            </:actions>
+            <:actions label="Scale" phx-click="scale">
+              <Button.button size="sm" variant="outline" phx-click="scale">Scale</Button.button>
+            </:actions>
+            <:actions label="Rollback" phx-click="rollback">
+              <Button.button size="sm" variant="outline" phx-click="rollback">Rollback</Button.button>
+            </:actions>
+            <:actions label="Settings" phx-click="settings">
+              <Button.button size="sm" variant="outline" phx-click="settings">Settings</Button.button>
+            </:actions>
+          </Layout.breadcrumb_bar>
+        </.demo_section>
+        <.demo_section
+          title="Destructive entry"
+          description="Put data-confirm on the :actions slot. A folded item renders from slot attrs and never its body, so a confirm placed only on an inner button is lost once the entry folds."
+          code={~S'''
+          <.breadcrumb_bar>
+            <.breadcrumb>
+              <:item href="#">Workspace</:item>
+              <:item current>skusync</:item>
+            </.breadcrumb>
+            <:actions label="Edit">
+              <.button size="sm" variant="outline">Edit</.button>
+            </:actions>
+            <:actions label="Clone">
+              <.button size="sm" variant="outline">Clone</.button>
+            </:actions>
+            <:actions
+              label="Delete"
+              phx-click="delete"
+              data-confirm="Delete this project? This cannot be undone."
+            >
+              <.button
+                size="sm"
+                variant="outline"
+                color="danger"
+                phx-click="delete"
+                data-confirm="Delete this project? This cannot be undone."
+              >
+                Delete
+              </.button>
+            </:actions>
+          </.breadcrumb_bar>
+          '''}
+        >
+          <Layout.breadcrumb_bar id="demo-bc-destructive">
+            <Breadcrumb.breadcrumb>
+              <:item href="#">Workspace</:item>
+              <:item current>skusync</:item>
+            </Breadcrumb.breadcrumb>
+            <:actions label="Edit">
+              <Button.button size="sm" variant="outline">Edit</Button.button>
+            </:actions>
+            <:actions label="Clone">
+              <Button.button size="sm" variant="outline">Clone</Button.button>
+            </:actions>
+            <:actions
+              label="Delete"
+              phx-click="delete"
+              data-confirm="Delete this project? This cannot be undone."
+            >
+              <Button.button
+                size="sm"
+                variant="outline"
+                color="danger"
+                phx-click="delete"
+                data-confirm="Delete this project? This cannot be undone."
+              >
+                Delete
+              </Button.button>
+            </:actions>
+          </Layout.breadcrumb_bar>
+        </.demo_section>
       </article>
 
       <article :if={@current == "navlist"} class="docs-body">
@@ -1058,6 +1208,144 @@ defmodule LanternDemoWeb.ComponentsLive do
             <:action><Button.button size="sm">Upload</Button.button></:action>
             <:action><Button.button size="sm" variant="ghost">New folder</Button.button></:action>
           </EmptyState.empty_state>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "timeline"} class="docs-body">
+        <h1>Timeline</h1>
+        <p>
+          Vertical event sequence with a marker rail:
+          <code>timeline/1</code> plus <code>timeline_item/1</code>. Ordered list markup;
+          pure server render, no JS hook.
+        </p>
+        <.demo_section
+          title="Basic"
+          description="Three items with status :done / :active / :pending plus label, at, and title. The state word always renders, so items stay legible in grayscale."
+          code={~S'''
+          <.timeline>
+            <.timeline_item status={:done} label="Deployed" at="2h ago" title="enventory" />
+            <.timeline_item status={:active} label="Deploying" at="40s" title="foodfeed" />
+            <.timeline_item status={:pending} label="Queued" at="just now" title="skusync" />
+          </.timeline>
+          '''}
+        >
+          <Timeline.timeline>
+            <Timeline.timeline_item status={:done} label="Deployed" at="2h ago" title="enventory" />
+            <Timeline.timeline_item status={:active} label="Deploying" at="40s" title="foodfeed" />
+            <Timeline.timeline_item status={:pending} label="Queued" at="just now" title="skusync" />
+          </Timeline.timeline>
+        </.demo_section>
+        <.demo_section
+          title="Statuses"
+          description="One item per status, including :danger and :neutral."
+          code={~S'''
+          <.timeline>
+            <.timeline_item status={:done} label="Deployed" title="done" />
+            <.timeline_item status={:active} label="Deploying" title="active" />
+            <.timeline_item status={:pending} label="Queued" title="pending" />
+            <.timeline_item status={:danger} label="Failed" title="danger" />
+            <.timeline_item status={:neutral} label="Note" title="neutral" />
+          </.timeline>
+          '''}
+        >
+          <Timeline.timeline>
+            <Timeline.timeline_item status={:done} label="Deployed" title="done" />
+            <Timeline.timeline_item status={:active} label="Deploying" title="active" />
+            <Timeline.timeline_item status={:pending} label="Queued" title="pending" />
+            <Timeline.timeline_item status={:danger} label="Failed" title="danger" />
+            <Timeline.timeline_item status={:neutral} label="Note" title="neutral" />
+          </Timeline.timeline>
+        </.demo_section>
+        <.demo_section
+          title="Collapsible detail"
+          description="Deployment-log shape: title is the summary, :detail is the output. open starts expanded."
+          code={~S'''
+          <.timeline>
+            <.timeline_item status={:done} label="Deployed" at="2h ago" title="enventory">
+              <:detail>
+                <pre>==> Building release
+          Compiling 8 files (.ex)
+          Generated enventory app
+          ==> Deployed to production</pre>
+              </:detail>
+            </.timeline_item>
+            <.timeline_item status={:active} label="Deploying" at="40s" title="foodfeed" open>
+              <:detail>
+                <pre>==> Building release
+          Compiling 12 files (.ex)
+          Generated foodfeed app</pre>
+              </:detail>
+            </.timeline_item>
+          </.timeline>
+          '''}
+        >
+          <Timeline.timeline>
+            <Timeline.timeline_item status={:done} label="Deployed" at="2h ago" title="enventory">
+              <:detail>
+                <pre>==> Building release
+          Compiling 8 files (.ex)
+          Generated enventory app
+          ==> Deployed to production</pre>
+              </:detail>
+            </Timeline.timeline_item>
+            <Timeline.timeline_item status={:active} label="Deploying" at="40s" title="foodfeed" open>
+              <:detail>
+                <pre>==> Building release
+          Compiling 12 files (.ex)
+          Generated foodfeed app</pre>
+              </:detail>
+            </Timeline.timeline_item>
+          </Timeline.timeline>
+        </.demo_section>
+        <.demo_section
+          title="Leading labels"
+          description="label_position={:leading} on the container places timestamps in their own column; items inherit it."
+          code={~S'''
+          <.timeline label_position={:leading}>
+            <.timeline_item status={:done} label="Deployed" at="2h ago" title="enventory" />
+            <.timeline_item status={:active} label="Deploying" at="40s" title="foodfeed" />
+            <.timeline_item status={:pending} label="Queued" at="just now" title="skusync" />
+          </.timeline>
+          '''}
+        >
+          <Timeline.timeline label_position={:leading}>
+            <Timeline.timeline_item status={:done} label="Deployed" at="2h ago" title="enventory" />
+            <Timeline.timeline_item status={:active} label="Deploying" at="40s" title="foodfeed" />
+            <Timeline.timeline_item status={:pending} label="Queued" at="just now" title="skusync" />
+          </Timeline.timeline>
+        </.demo_section>
+        <.demo_section
+          title="Marker slot"
+          description=":marker replaces the status dot or icon. Avatars and other custom glyphs are supported."
+          code={~S'''
+          <.timeline>
+            <.timeline_item status={:done} label="Merged" at="3h ago" title="PR #412">
+              <:marker>
+                <span class="docs-timeline-avatar">GO</span>
+              </:marker>
+            </.timeline_item>
+            <.timeline_item status={:active} label="Reviewing" at="12m" title="PR #418">
+              <:marker>
+                <span class="docs-timeline-avatar">AL</span>
+              </:marker>
+            </.timeline_item>
+            <.timeline_item status={:pending} label="Queued" at="just now" title="PR #421" />
+          </.timeline>
+          '''}
+        >
+          <Timeline.timeline>
+            <Timeline.timeline_item status={:done} label="Merged" at="3h ago" title="PR #412">
+              <:marker>
+                <span class="docs-timeline-avatar">GO</span>
+              </:marker>
+            </Timeline.timeline_item>
+            <Timeline.timeline_item status={:active} label="Reviewing" at="12m" title="PR #418">
+              <:marker>
+                <span class="docs-timeline-avatar">AL</span>
+              </:marker>
+            </Timeline.timeline_item>
+            <Timeline.timeline_item status={:pending} label="Queued" at="just now" title="PR #421" />
+          </Timeline.timeline>
         </.demo_section>
       </article>
 
@@ -2211,6 +2499,13 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-icon-cell code { font-size: .625rem; color: var(--lantern-fg-subtle); }
         .docs-cal-box { max-width: 320px; }
         .docs-spark-box { max-width: 220px; }
+        .docs-timeline-avatar {
+          display: inline-flex; align-items: center; justify-content: center;
+          border-radius: 9999px; background: var(--lantern-accent);
+          color: var(--lantern-accent-fg);
+          font-size: 0.5rem; font-weight: 650; letter-spacing: 0.02em;
+          line-height: 1;
+        }
         .docs-code { margin: .75rem 0 0; padding: .875rem 1rem; border-radius: var(--lantern-radius-md);
           background: var(--lantern-surface-sunken); border: 1px solid var(--lantern-border);
           overflow-x: auto; }
