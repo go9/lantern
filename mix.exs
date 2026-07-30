@@ -33,10 +33,10 @@ defmodule Lantern.MixProject do
     [
       {:phoenix_live_view, "~> 1.1"},
       {:livecode, github: "go9/livecode"},
-      # LOCAL DEV OVERRIDE (flicker#1202) — the demo documents timeline/1 and the
-      # breadcrumb_bar :actions slot, which are unreleased. REVERT to the github
-      # dep before merging:  {:lantern_ui, github: "go9/lantern-ui"},
-      {:lantern_ui, path: "/Users/giovanniorlando/Sites/lantern-ui-console-bar", override: true},
+      {:lantern_ui,
+       github: "go9/lantern-ui",
+       ref: "8756ea997df8dec97d9cec4bc4be7e46d7c8cd9c",
+       override: true},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
       # Heroicons SVG source (build-only, uncompiled). icon/1 reads the outline
