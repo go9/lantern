@@ -18,6 +18,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Button
   alias LanternUI.Components.Calendar
   alias LanternUI.Components.Checkbox
+  alias LanternUI.Components.Command
   alias LanternUI.Components.DatePicker
   alias LanternUI.Components.DatetimeField
   alias LanternUI.Components.Dropdown
@@ -64,6 +65,69 @@ defmodule LanternDemoWeb.ComponentsLive do
     %{group: "Nintendo Switch", label: "Animal Crossing: New Horizons", value: "animal-crossing"}
   ]
 
+  # Command palette source data. The component deliberately filters nothing —
+  # it renders exactly the items it is handed — so this list stays here and the
+  # LiveView answers `command_search` itself.
+  @commands [
+    %{
+      group: "Navigate",
+      value: "goto-buttons",
+      label: "Go to Button",
+      icon: "cursor-arrow-rays",
+      description: "Components → Button",
+      shortcut: "G B"
+    },
+    %{
+      group: "Navigate",
+      value: "goto-data-table",
+      label: "Go to Data table",
+      icon: "view-columns",
+      description: "Components → Data table",
+      shortcut: "G T"
+    },
+    %{
+      group: "Navigate",
+      value: "goto-theming",
+      label: "Go to Theming",
+      icon: "sparkles",
+      description: "Tokens, density, and dark mode",
+      shortcut: "G H"
+    },
+    %{
+      group: "Actions",
+      value: "toggle-theme",
+      label: "Toggle dark mode",
+      icon: "adjustments-horizontal",
+      description: "Flip the demo between light and dark",
+      shortcut: "⌘ D"
+    },
+    %{
+      group: "Actions",
+      value: "copy-install",
+      label: "Copy install snippet",
+      icon: "document",
+      description: ~s({:lantern_ui, "~> 0.3"}),
+      shortcut: "⌘ C"
+    },
+    %{
+      group: "Actions",
+      value: "new-ticket",
+      label: "Open a new ticket",
+      icon: "inbox",
+      description: "File an issue against lantern-ui",
+      shortcut: "⌘ N"
+    },
+    %{
+      group: "Danger zone",
+      value: "reset-sandbox",
+      label: "Reset the sandbox database",
+      icon: "trash",
+      description: "Disabled in this demo",
+      shortcut: nil,
+      disabled: true
+    }
+  ]
+
   # slug -> the component functions whose props/slots to document (introspected)
   @api_map %{
     "app-shell" => [{Layout, :app_shell}, {Layout, :nav_group}, {Layout, :nav_item}],
@@ -88,6 +152,12 @@ defmodule LanternDemoWeb.ComponentsLive do
       {Dropdown, :dropdown},
       {Dropdown, :dropdown_button},
       {Dropdown, :dropdown_link}
+    ],
+    "command" => [
+      {Command, :command},
+      {Command, :command_group},
+      {Command, :command_item},
+      {Command, :command_empty}
     ],
     "breadcrumb" => [{Breadcrumb, :breadcrumb}],
     "empty-state" => [{EmptyState, :empty_state}],
@@ -198,6 +268,9 @@ defmodule LanternDemoWeb.ComponentsLive do
        demo_tab: "one",
        toast_placement: "top-right",
        catalog_options: [],
+       command_query: "",
+       command_groups: command_matches(""),
+       command_selection: nil,
        alert_dialog_status: nil,
        area: area,
        line: line,
@@ -241,6 +314,19 @@ defmodule LanternDemoWeb.ComponentsLive do
 
   def handle_event("search_catalog", %{"query" => query}, socket) do
     {:noreply, assign(socket, :catalog_options, catalog_options(query))}
+  end
+
+  # The palette does no filtering of its own — it renders what it is handed and
+  # reports the query upward. Answering this event is what makes typing filter.
+  def handle_event("command_search", %{"query" => query}, socket) do
+    {:noreply, assign(socket, command_query: query, command_groups: command_matches(query))}
+  end
+
+  def handle_event("command_select", %{"value" => value}, socket) do
+    label =
+      Enum.find_value(@commands, value, fn cmd -> cmd.value == value && cmd.label end)
+
+    {:noreply, assign(socket, :command_selection, {value, label})}
   end
 
   def handle_event("confirm_demo_revoke", _params, socket) do
@@ -1009,6 +1095,95 @@ defmodule LanternDemoWeb.ComponentsLive do
               <Dropdown.dropdown_button>Move…</Dropdown.dropdown_button>
             </Dropdown.dropdown>
           </div>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "command"} class="docs-body">
+        <h1>Command palette</h1>
+        <p>
+          A ⌘K dialog: a modal combobox over a listbox of actions, on the shared overlay
+          runtime. The component owns opening, the focus trap, keyboard traversal, and
+          <code>aria-activedescendant</code>; <strong>it never filters its own children</strong>
+          — it renders exactly the items you hand it and reports the query upward, so search
+          can come from a database, an index, or memory.
+        </p>
+        <.demo_section
+          title="Searchable actions"
+          description="Press ⌘K (Ctrl+K on Windows/Linux) or use the button. Type to filter, ↑/↓ to move, Enter to choose, Esc to close. Filtering happens in the LiveView — the palette itself renders whatever it is given."
+          code={~S'''
+          # LiveView — the palette does no filtering, so you do
+          def handle_event("command_search", %{"query" => query}, socket) do
+            {:noreply, assign(socket, query: query, groups: command_matches(query))}
+          end
+
+          def handle_event("command_select", %{"value" => value}, socket) do
+            {:noreply, assign(socket, :selection, value)}
+          end
+
+          <.button phx-click={LanternUI.open_dialog("cmd-demo")}>
+            Search… <.command_shortcut>⌘K</.command_shortcut>
+          </.button>
+
+          <.command id="cmd-demo" on_search="command_search" on_select="command_select">
+            <.command_group :for={{group, items} <- @groups} label={group}>
+              <.command_item :for={cmd <- items} value={cmd.value} disabled={cmd.disabled}>
+                <:icon><.icon name={cmd.icon} /></:icon>
+                {cmd.label}
+                <:description>{cmd.description}</:description>
+                <:shortcut>{cmd.shortcut}</:shortcut>
+              </.command_item>
+            </.command_group>
+
+            <.command_empty :if={@groups == []}>No commands match “{@query}”.</.command_empty>
+
+            <:footer>↑↓ to navigate · ↵ to select · esc to close</:footer>
+          </.command>
+          '''}
+        >
+          <div class="docs-row">
+            <Button.button phx-click={LanternUI.open_dialog("cmd-demo")}>
+              Search commands…
+              <Command.command_shortcut>⌘K</Command.command_shortcut>
+            </Button.button>
+            <p id="command-selection" class="docs-confirm-status" role="status">
+              <%= case @command_selection do %>
+                <% nil -> %>
+                  Nothing chosen yet — open the palette and press Enter on a row.
+                <% {value, label} -> %>
+                  Selected <strong>{label}</strong> (<code>{value}</code>)
+              <% end %>
+            </p>
+          </div>
+
+          <Command.command
+            id="cmd-demo"
+            label="Demo command palette"
+            placeholder="Type a command or search…"
+            on_search="command_search"
+            on_select="command_select"
+            debounce={120}
+          >
+            <Command.command_group :for={{group, items} <- @command_groups} label={group}>
+              <Command.command_item
+                :for={cmd <- items}
+                value={cmd.value}
+                disabled={Map.get(cmd, :disabled, false)}
+              >
+                <:icon><Icon.icon name={cmd.icon} /></:icon>
+                {cmd.label}
+                <:description>{cmd.description}</:description>
+                <:shortcut :if={cmd.shortcut}>{cmd.shortcut}</:shortcut>
+              </Command.command_item>
+            </Command.command_group>
+
+            <Command.command_empty :if={@command_groups == []}>
+              No commands match “{@command_query}”.
+            </Command.command_empty>
+
+            <:footer>
+              <span>↑↓ to navigate · ↵ to select · esc to close</span>
+            </:footer>
+          </Command.command>
         </.demo_section>
       </article>
 
@@ -2314,6 +2489,20 @@ defmodule LanternDemoWeb.ComponentsLive do
         {group, Enum.map(items, &{&1.label, &1.value})}
       end)
     end
+  end
+
+  defp command_matches(query) do
+    normalized = query |> String.trim() |> String.downcase()
+
+    @commands
+    |> Enum.filter(fn cmd ->
+      normalized == "" or
+        String.contains?(String.downcase(cmd.label), normalized) or
+        String.contains?(String.downcase(cmd.description || ""), normalized) or
+        String.contains?(String.downcase(cmd.group), normalized)
+    end)
+    |> Enum.chunk_by(& &1.group)
+    |> Enum.map(fn [%{group: group} | _] = items -> {group, items} end)
   end
 
   defp slugify(title) do

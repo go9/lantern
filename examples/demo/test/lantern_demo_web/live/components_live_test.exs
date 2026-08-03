@@ -12,7 +12,15 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
     {"alert-dialog",
      ["<h1>Alert dialog</h1>", ~s(id="alert-dialog-demo"), ~s(role="alertdialog")]},
     {"skeleton", ["<h1>Skeleton</h1>", ~s(aria-label="Loading profile"), "lui-skeleton"]},
-    {"stat", ["<h1>Stat cards</h1>", "lui-stat-grid", "pending-warehouse-confirmation-2026-07"]}
+    {"stat", ["<h1>Stat cards</h1>", "lui-stat-grid", "pending-warehouse-confirmation-2026-07"]},
+    {"command",
+     [
+       "<h1>Command palette</h1>",
+       ~s(id="cmd-demo"),
+       ~s(phx-hook="LanternCommand"),
+       ~s(data-on-search="command_search"),
+       ~s(data-value="goto-theming")
+     ]}
   ]
 
   test "new component pages render permanent examples and shared appearance controls" do
@@ -35,6 +43,40 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
     assert html =~ ~s(href="/components/alert-dialog")
     assert html =~ ~s(href="/components/skeleton")
     assert html =~ ~s(href="/components/stat")
+    assert html =~ ~s(href="/components/command")
+  end
+
+  # The palette filters nothing itself, so these handlers ARE the search.
+  test "command palette search filters and groups the demo command list" do
+    {:ok, socket} = mount_components()
+
+    assert Enum.map(socket.assigns.command_groups, &elem(&1, 0)) ==
+             ["Navigate", "Actions", "Danger zone"]
+
+    {:noreply, navigate} =
+      LanternDemoWeb.ComponentsLive.handle_event("command_search", %{"query" => "go to"}, socket)
+
+    assert [{"Navigate", items}] = navigate.assigns.command_groups
+    assert Enum.map(items, & &1.value) == ["goto-buttons", "goto-data-table", "goto-theming"]
+    assert navigate.assigns.command_query == "go to"
+
+    {:noreply, empty} =
+      LanternDemoWeb.ComponentsLive.handle_event("command_search", %{"query" => "zzz"}, socket)
+
+    assert empty.assigns.command_groups == []
+  end
+
+  test "command palette selection is reported back with its label" do
+    {:ok, socket} = mount_components()
+
+    {:noreply, chosen} =
+      LanternDemoWeb.ComponentsLive.handle_event(
+        "command_select",
+        %{"value" => "new-ticket"},
+        socket
+      )
+
+    assert chosen.assigns.command_selection == {"new-ticket", "Open a new ticket"}
   end
 
   test "server-backed autocomplete filters and groups fixed catalog data" do

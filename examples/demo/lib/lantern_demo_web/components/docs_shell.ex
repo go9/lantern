@@ -45,6 +45,7 @@ defmodule LanternDemoWeb.DocsShell do
        {"alert-dialog", "Alert dialog"},
        {"sheet", "Sheet"},
        {"dropdown", "Dropdown menu"},
+       {"command", "Command palette"},
        {"breadcrumb", "Breadcrumb"},
        {"empty-state", "Empty state"},
        {"switch", "Switch"},
