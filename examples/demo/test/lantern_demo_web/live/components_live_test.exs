@@ -20,8 +20,13 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
        ~s(id="cmd-demo"),
        ~s(phx-hook="LanternCommand"),
        ~s(data-on-search="command_search"),
-       ~s(data-value="goto-theming")
+       ~s(data-value="goto-theming"),
+       ~s(data-part="separator")
      ]},
+    {"dropdown",
+     ["<h1>Dropdown menu</h1>", ~s(lui-dropdown-custom), "Signed in as ada@example.com"]},
+    {"date-picker",
+     ["<h1>Date &amp; time pickers</h1>", ~s(class="lui-date-range"), "Release window"]},
     {"chat-kit",
      [
        "<h1>Chat kit</h1>",
@@ -39,6 +44,35 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
        "Append reply",
        "Toggle streaming",
        "Reset"
+     ]},
+    {"popover", ["<h1>Popover</h1>", ~s(id="filters"), ~s(role="dialog"), "lui-popover"]},
+    {"menu",
+     ["<h1>Menu and menubar</h1>", ~s(role="menu"), ~s(role="menubar"), ~s(role="separator")]},
+    {"slider",
+     ["<h1>Slider</h1>", ~s(role="slider"), ~s(data-part="input"), ~s(aria-valuetext="72%")]},
+    {"resource-list",
+     ["<h1>Resource list</h1>", ~s(data-layout="list"), ~s(data-layout="grid"), "Atlas"]},
+    {"color-input",
+     [
+       "<h1>Color input</h1>",
+       ~s(type="color"),
+       ~s(id="brand-color"),
+       "Used in the project header"
+     ]},
+    {"progress-meter",
+     [
+       "<h1>Progress and meter</h1>",
+       ~s(role="progressbar"),
+       ~s(role="meter"),
+       ~s(data-state="indeterminate")
+     ]},
+    {"scroll-area",
+     [
+       "<h1>Scroll area</h1>",
+       ~s(data-orientation="vertical"),
+       ~s(data-orientation="horizontal"),
+       ~s(data-orientation="both"),
+       ~s(tabindex="0")
      ]}
   ]
 
@@ -64,6 +98,13 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
     assert html =~ ~s(href="/components/stat")
     assert html =~ ~s(href="/components/command")
     assert html =~ ~s(href="/components/chat-kit")
+    assert html =~ ~s(href="/components/popover")
+    assert html =~ ~s(href="/components/menu")
+    assert html =~ ~s(href="/components/slider")
+    assert html =~ ~s(href="/components/resource-list")
+    assert html =~ ~s(href="/components/color-input")
+    assert html =~ ~s(href="/components/progress-meter")
+    assert html =~ ~s(href="/components/scroll-area")
   end
 
   test "chat kit controls change the transcript and busy state" do
@@ -132,6 +173,12 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
       )
 
     assert chosen.assigns.command_selection == {"new-ticket", "Open a new ticket"}
+  end
+
+  test "command palette places separators between groups" do
+    html = build_conn() |> get("/components/command") |> html_response(200)
+
+    assert html =~ ~r/lui-command-group.*lui-command-separator.*lui-command-group/s
   end
 
   test "server-backed autocomplete filters and groups fixed catalog data" do

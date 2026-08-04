@@ -31,6 +31,14 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Modal
   alias LanternUI.Components.Message
   alias LanternUI.Components.MessageScroller
+  alias LanternUI.Components.Menu
+  alias LanternUI.Components.Popover
+  alias LanternUI.Components.Progress
+  alias LanternUI.Components.Meter
+  alias LanternUI.Components.ResourceList
+  alias LanternUI.Components.ColorInput
+  alias LanternUI.Components.ScrollArea
+  alias LanternUI.Components.Slider
   alias LanternUI.Components.Navlist
   alias LanternUI.Components.Pagination
   alias LanternUI.Components.Radio
@@ -110,7 +118,8 @@ defmodule LanternDemoWeb.ComponentsLive do
       value: "copy-install",
       label: "Copy install snippet",
       icon: "document",
-      description: ~s({:lantern_ui, "~> 0.3"}),
+      description:
+        ~s({:lantern_ui, github: "go9/lantern-ui", ref: "0ad0627054ee6765c81eceace58ad316959565bb"}),
       shortcut: "⌘ C"
     },
     %{
@@ -138,35 +147,59 @@ defmodule LanternDemoWeb.ComponentsLive do
       {Layout, :app_shell},
       {Layout, :nav_group},
       {Layout, :nav_item},
-      {Layout, :breadcrumb_bar}
+      {Layout, :breadcrumb_bar},
+      {Layout, :page_header}
     ],
     "navlist" => [{Navlist, :navlist}, {Navlist, :navheading}, {Navlist, :navlink}],
-    "table" => [{Table, :table}, {Table, :table_head}, {Table, :table_row}],
+    "table" => [{Table, :table}, {Table, :table_head}, {Table, :table_body}, {Table, :table_row}],
     "pagination" => [{Pagination, :pagination}],
     "tabs" => [{Tabs, :tabs_list}, {Tabs, :tabs_panel}],
     "select" => [{Select, :select}],
     "badge" => [{Badge, :badge}],
     "button" => [{Button, :button}],
     "icon" => [{Icon, :icon}],
-    "input" => [{Form, :input}],
+    "input" => [{Form, :input}, {Form, :label}, {Form, :error}],
+    "popover" => [{Popover, :popover}],
+    "menu" => [
+      {Menu, :menu},
+      {Menu, :menu_item},
+      {Menu, :menu_separator},
+      {Menu, :menubar},
+      {Menu, :menubar_menu}
+    ],
+    "slider" => [{Slider, :slider}],
+    "resource-list" => [{ResourceList, :resource_list}, {ResourceList, :resource_list_item}],
+    "color-input" => [{ColorInput, :color_input}],
+    "progress-meter" => [{Progress, :progress}, {Meter, :meter}],
+    "scroll-area" => [{ScrollArea, :scroll_area}],
     "autocomplete" => [{Autocomplete, :autocomplete}],
     "accordion" => [{Accordion, :accordion}, {Accordion, :accordion_item}],
     "datetime-field" => [{DatetimeField, :datetime_field}],
     "calendar" => [{Calendar, :calendar}],
-    "date-picker" => [{DatePicker, :date_picker}, {DatePicker, :datetime_picker}],
+    "date-picker" => [
+      {DatePicker, :date_picker},
+      {DatePicker, :date_time_picker},
+      {DatePicker, :time_picker},
+      {DatePicker, :date_range_picker}
+    ],
     "checkbox" => [{Checkbox, :checkbox}],
     "modal" => [{Modal, :modal}],
     "alert-dialog" => [{AlertDialog, :alert_dialog}],
     "dropdown" => [
       {Dropdown, :dropdown},
       {Dropdown, :dropdown_button},
-      {Dropdown, :dropdown_link}
+      {Dropdown, :dropdown_link},
+      {Dropdown, :dropdown_header},
+      {Dropdown, :dropdown_separator},
+      {Dropdown, :dropdown_custom}
     ],
     "command" => [
       {Command, :command},
       {Command, :command_group},
       {Command, :command_item},
-      {Command, :command_empty}
+      {Command, :command_empty},
+      {Command, :command_separator},
+      {Command, :command_shortcut}
     ],
     "breadcrumb" => [{Breadcrumb, :breadcrumb}],
     "empty-state" => [{EmptyState, :empty_state}],
@@ -376,7 +409,9 @@ defmodule LanternDemoWeb.ComponentsLive do
        spark: [3, 5, 4, 8, 6, 9, 7, 11, 9, 12],
        chat_demo_messages: @chat_demo_messages,
        chat_demo_busy: false,
-       chat_demo_next_reply: 8
+       chat_demo_next_reply: 8,
+       range_form:
+         Phoenix.Component.to_form(%{"from" => "2026-08-01", "to" => "2026-08-07"}, as: :range)
      )}
   end
 
@@ -530,6 +565,19 @@ defmodule LanternDemoWeb.ComponentsLive do
               <Button.button size="sm">New deploy</Button.button>
             </:actions>
           </Layout.breadcrumb_bar>
+        </.demo_section>
+        <.demo_section
+          title="Page header"
+          description="A title, supporting description, and right-side actions compose the page header below the breadcrumb."
+          code={~S'''
+          <.page_header title="Projects" description="Manage deployed resources">
+            <:actions><.button>New project</.button></:actions>
+          </.page_header>
+          '''}
+        >
+          <Layout.page_header title="Projects" description="Manage deployed resources">
+            <:actions><Button.button>New project</Button.button></:actions>
+          </Layout.page_header>
         </.demo_section>
         <.demo_section
           title="Overflow"
@@ -1146,6 +1194,20 @@ defmodule LanternDemoWeb.ComponentsLive do
             errors={["can't be blank"]}
           />
         </.demo_section>
+        <.demo_section
+          title="Date range"
+          description="Two ordinary form fields compose a start and end date range."
+          code={~S'''
+          <.date_range_picker start_field={f[:from]} end_field={f[:to]} label="Release window" />
+          '''}
+        >
+          <DatePicker.date_range_picker
+            id="pk-range"
+            start_field={@range_form[:from]}
+            end_field={@range_form[:to]}
+            label="Release window"
+          />
+        </.demo_section>
       </article>
 
       <article :if={@current == "checkbox"} class="docs-body">
@@ -1361,8 +1423,23 @@ defmodule LanternDemoWeb.ComponentsLive do
               </:toggle>
               <Dropdown.dropdown_button>Duplicate</Dropdown.dropdown_button>
               <Dropdown.dropdown_button>Move…</Dropdown.dropdown_button>
-            </Dropdown.dropdown>
-          </div>
+              </Dropdown.dropdown>
+            </div>
+          </.demo_section>
+        <.demo_section
+          title="Custom content"
+          description="Use dropdown_custom for non-item content that should stay inside the menu panel."
+          code={~S'''
+          <.dropdown id="dd-custom" label="Account">
+            <.dropdown_custom><p>Signed in as ada@example.com</p></.dropdown_custom>
+          </.dropdown>
+          '''}
+        >
+          <Dropdown.dropdown id="dd-custom" label="Account">
+            <Dropdown.dropdown_custom class="docs-dropdown-custom">
+              <p data-part="custom-content">Signed in as ada@example.com</p>
+            </Dropdown.dropdown_custom>
+          </Dropdown.dropdown>
         </.demo_section>
       </article>
 
@@ -1378,35 +1455,7 @@ defmodule LanternDemoWeb.ComponentsLive do
         <.demo_section
           title="Searchable actions"
           description="Press ⌘K (Ctrl+K on Windows/Linux) or use the button. Type to filter, ↑/↓ to move, Enter to choose, Esc to close. Filtering happens in the LiveView — the palette itself renders whatever it is given."
-          code={~S'''
-          # LiveView — the palette does no filtering, so you do
-          def handle_event("command_search", %{"query" => query}, socket) do
-            {:noreply, assign(socket, query: query, groups: command_matches(query))}
-          end
-
-          def handle_event("command_select", %{"value" => value}, socket) do
-            {:noreply, assign(socket, :selection, value)}
-          end
-
-          <.button phx-click={LanternUI.open_dialog("cmd-demo")}>
-            Search… <.command_shortcut>⌘K</.command_shortcut>
-          </.button>
-
-          <.command id="cmd-demo" on_search="command_search" on_select="command_select">
-            <.command_group :for={{group, items} <- @groups} label={group}>
-              <.command_item :for={cmd <- items} value={cmd.value} disabled={cmd.disabled}>
-                <:icon><.icon name={cmd.icon} /></:icon>
-                {cmd.label}
-                <:description>{cmd.description}</:description>
-                <:shortcut>{cmd.shortcut}</:shortcut>
-              </.command_item>
-            </.command_group>
-
-            <.command_empty :if={@groups == []}>No commands match “{@query}”.</.command_empty>
-
-            <:footer>↑↓ to navigate · ↵ to select · esc to close</:footer>
-          </.command>
-          '''}
+          code={command_demo_code()}
         >
           <div class="docs-row">
             <Button.button phx-click={LanternUI.open_dialog("cmd-demo")}>
@@ -1431,19 +1480,21 @@ defmodule LanternDemoWeb.ComponentsLive do
             on_select="command_select"
             debounce={120}
           >
-            <Command.command_group :for={{group, items} <- @command_groups} label={group}>
-              <Command.command_item
-                :for={cmd <- items}
-                value={cmd.value}
-                disabled={Map.get(cmd, :disabled, false)}
-              >
-                <:icon><Icon.icon name={cmd.icon} /></:icon>
-                {cmd.label}
-                <:description>{cmd.description}</:description>
-                <:shortcut :if={cmd.shortcut}>{cmd.shortcut}</:shortcut>
-              </Command.command_item>
-            </Command.command_group>
-
+            <%= for {{group, items}, index} <- Enum.with_index(@command_groups) do %>
+              <Command.command_separator :if={index > 0} />
+              <Command.command_group label={group}>
+                <Command.command_item
+                  :for={cmd <- items}
+                  value={cmd.value}
+                  disabled={Map.get(cmd, :disabled, false)}
+                >
+                  <:icon><Icon.icon name={cmd.icon} /></:icon>
+                  {cmd.label}
+                  <:description>{cmd.description}</:description>
+                  <:shortcut :if={cmd.shortcut}>{cmd.shortcut}</:shortcut>
+                </Command.command_item>
+              </Command.command_group>
+            <% end %>
             <Command.command_empty :if={@command_groups == []}>
               No commands match “{@command_query}”.
             </Command.command_empty>
@@ -2791,6 +2842,76 @@ defmodule LanternDemoWeb.ComponentsLive do
         <.code_block id="code-sparkline" code={@snippets["sparkline"]} />
       </article>
 
+      <article :if={@current == "popover"} class="docs-body">
+        <h1>Popover</h1>
+        <p>Popover content is a surface for form-like content. It keeps focus return, Escape, and outside-click dismissal while allowing interaction inside the panel. Unlike a dropdown menu, it does not close when a field is used.</p>
+        <.demo_section title="Filter form" description="The default slot is the trigger and :content is the panel." code={~s"<.popover id=\"filters\" placement=\"bottom-start\"><.button variant=\"outline\">Filters</.button><:content><.input name=\"query\" label=\"Project name\" /><.button size=\"sm\">Apply</.button></:content></.popover>"}>
+          <Popover.popover id="filters" placement="bottom-start"><Button.button variant="outline">Filters</Button.button><:content><Form.input name="query" label="Project name" description="Search active projects." /><Button.button size="sm">Apply</Button.button></:content></Popover.popover>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "menu"} class="docs-body">
+        <h1>Menu and menubar</h1>
+        <p>These controls implement the APG menu-button and menubar keyboard models with roles, roving tabindex, arrow keys, Home, and End.</p>
+        <.demo_section title="Actions" description="Items can be disabled, separated, linked, or custom-triggered." code={~s"<.menu label=\"File\"><.menu_item>New</.menu_item><.menu_separator /><.menu_item disabled>Unavailable</.menu_item><.menu_item>Export</.menu_item></.menu>"}>
+          <Menu.menu id="file-menu" label="File"><Menu.menu_item>New</Menu.menu_item><Menu.menu_separator /><Menu.menu_item disabled>Unavailable</Menu.menu_item><Menu.menu_item>Export <kbd>⌘E</kbd></Menu.menu_item></Menu.menu>
+        </.demo_section>
+        <.demo_section title="Menubar" description="Top-level entries use horizontal arrow navigation." code={~s"<.menubar label=\"Editor\"><.menubar_menu label=\"File\"><.menu_item>New</.menu_item></.menubar_menu><.menubar_menu label=\"Edit\"><.menu_item>Undo</.menu_item></.menubar_menu></.menubar>"}>
+          <Menu.menubar id="editor-menubar" label="Editor"><Menu.menubar_menu label="File"><Menu.menu_item>New</Menu.menu_item></Menu.menubar_menu><Menu.menubar_menu label="Edit"><Menu.menu_item>Undo</Menu.menu_item></Menu.menubar_menu></Menu.menubar>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "slider"} class="docs-body">
+        <h1>Slider</h1>
+        <p>A pointer and keyboard slider writes its hidden input on committed changes. <code>value_text</code> supplies human-readable aria-valuetext; disabled and invalid states remain visible.</p>
+        <.demo_section title="Volume" description="Use Arrow keys, Home, End, PageUp, PageDown, or drag the thumb." code={~s"<.slider id=\"volume\" name=\"volume\" value={72} min={0} max={100} step={4} label=\"Volume\" value_text=\"{value}%\" />"}>
+          <Slider.slider id="volume" name="volume" value={72} min={0} max={100} step={4} label="Volume" value_text="{value}%" />
+          <Slider.slider id="disabled-volume" name="disabled_volume" value={20} label="Disabled" disabled />
+          <Slider.slider id="invalid-volume" name="invalid_volume" value={120} label="Invalid" errors={["Choose a value below 100"]} />
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "resource-list"} class="docs-body">
+        <h1>Resource list</h1>
+        <p>Use list rows for compact indexes or grid cards for resource overviews. Linked rows make the whole row the hit target.</p>
+        <.demo_section title="List" description="Subtitle, leading content, and trailing metadata compose a linked resource row." code={~s"<.resource_list layout={:list}><.resource_list_item navigate=\"/projects/atlas\" title=\"Atlas\" subtitle=\"atlas\"><.badge>Healthy</.badge></.resource_list_item></.resource_list>"}>
+          <ResourceList.resource_list layout={:list}><ResourceList.resource_list_item navigate="/projects/atlas" title="Atlas" subtitle="atlas" subtitle_mono><Badge.badge>Healthy</Badge.badge><span>3 apps</span></ResourceList.resource_list_item><ResourceList.resource_list_item title="Beacon" subtitle="beacon"><Badge.badge color="warning">Review</Badge.badge></ResourceList.resource_list_item></ResourceList.resource_list>
+        </.demo_section>
+        <.demo_section title="Grid" description="The same item contract becomes cards with layout={:grid}." code={~s"<.resource_list layout={:grid}><.resource_list_item title=\"Atlas\" subtitle=\"atlas\">3 apps</.resource_list_item></.resource_list>"}>
+          <ResourceList.resource_list layout={:grid}><ResourceList.resource_list_item title="Atlas" subtitle="atlas" subtitle_mono>3 apps</ResourceList.resource_list_item><ResourceList.resource_list_item title="Beacon" subtitle="beacon">1 app</ResourceList.resource_list_item></ResourceList.resource_list>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "color-input"} class="docs-body">
+        <h1>Color input</h1>
+        <p>A native color control with form-compatible name/value, label, help text, errors, disabled state, and density tokens.</p>
+        <.demo_section title="Theme color" description="The submitted element is the real input type=color." code={~s"<.color_input id=\"brand-color\" name=\"brand\" value=\"#4f46e5\" label=\"Brand color\" help_text=\"Used in the project header.\" />"}>
+          <ColorInput.color_input id="brand-color" name="brand" value="#4f46e5" label="Brand color" help_text="Used in the project header." />
+          <ColorInput.color_input id="disabled-color" name="disabled" value="#64748b" label="Disabled" size="sm" disabled />
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "progress-meter"} class="docs-body">
+        <h1>Progress and meter</h1>
+        <p>Progress communicates task completion. Meter communicates a scalar measurement in a known range, with optional low, high, and optimum regions.</p>
+        <.demo_section title="Task progress" description="Determinate and indeterminate progress use role=progressbar." code={~s"<.progress value={64} label=\"Upload\" /><.progress indeterminate label=\"Preparing\" />"}>
+          <Progress.progress value={64} label="Upload" color="success" /><Progress.progress indeterminate label="Preparing" />
+        </.demo_section>
+        <.demo_section title="Measurements" description="Meter exposes min, max, value, and semantic range regions." code={~s"<.meter value={72} min={0} max={100} low={30} high={80} optimum={50} label=\"CPU load\" />"}>
+          <Meter.meter value={72} min={0} max={100} low={30} high={80} optimum={50} label="CPU load" value_text="72 percent" />
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "scroll-area"} class="docs-body">
+        <h1>Scroll area</h1>
+        <p>Constrain the wrapper to create overflow. A label gives the region keyboard-scrollable semantics with a focusable role=region.</p>
+        <.demo_section title="Axes" description="Vertical, horizontal, and both-axis scrolling all use native browser behavior." code={~s"<.scroll_area label=\"Recent activity\" orientation=\"vertical\" style=\"max-height: 8rem\"><p>...</p></.scroll_area>"}>
+          <ScrollArea.scroll_area label="Recent activity" orientation="vertical" class="docs-scroll-demo"><p :for={n <- 1..8}>Activity event {n}</p></ScrollArea.scroll_area>
+          <ScrollArea.scroll_area label="Timeline" orientation="horizontal" class="docs-scroll-wide"><span :for={n <- 1..8}>Event {n} - </span></ScrollArea.scroll_area>
+          <ScrollArea.scroll_area label="Canvas" orientation="both" class="docs-scroll-both"><span :for={n <- 1..5}>Wide content {n} </span></ScrollArea.scroll_area>
+        </.demo_section>
+      </article>
+
       <.api_section current={@current} />
 
       <style>
@@ -2877,6 +2998,9 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-icon-cell code { font-size: .625rem; color: var(--lantern-fg-subtle); }
         .docs-cal-box { max-width: 320px; }
         .docs-spark-box { max-width: 220px; }
+         .docs-scroll-demo { max-height: 8rem; }
+        .docs-scroll-wide { width: 14rem; white-space: nowrap; overflow-x: auto; }
+         .docs-scroll-both { width: 14rem; height: 6rem; white-space: nowrap; overflow: auto; }
         .docs-timeline-avatar {
           display: inline-flex; align-items: center; justify-content: center;
           border-radius: 9999px; background: var(--lantern-accent);
@@ -3001,6 +3125,41 @@ defmodule LanternDemoWeb.ComponentsLive do
     end)
     |> Enum.chunk_by(& &1.group)
     |> Enum.map(fn [%{group: group} | _] = items -> {group, items} end)
+  end
+
+  defp command_demo_code do
+    ~S"""
+    # LiveView - the palette does no filtering, so you do
+    def handle_event("command_search", %{"query" => query}, socket) do
+      {:noreply, assign(socket, query: query, groups: command_matches(query))}
+    end
+
+    def handle_event("command_select", %{"value" => value}, socket) do
+      {:noreply, assign(socket, :selection, value)}
+    end
+
+    <.button phx-click={LanternUI.open_dialog("cmd-demo")}>
+      Search... <.command_shortcut>Cmd+K</.command_shortcut>
+    </.button>
+
+    <.command id="cmd-demo" on_search="command_search" on_select="command_select">
+      <%= for {{group, items}, index} <- Enum.with_index(@groups) do %>
+        <.command_separator :if={index > 0} />
+        <.command_group label={group}>
+          <.command_item :for={cmd <- items} value={cmd.value} disabled={cmd.disabled}>
+            <:icon><.icon name={cmd.icon} /></:icon>
+            {cmd.label}
+            <:description>{cmd.description}</:description>
+            <:shortcut>{cmd.shortcut}</:shortcut>
+          </.command_item>
+        </.command_group>
+      <% end %>
+
+      <.command_empty :if={@groups == []}>No commands match "{@query}".</.command_empty>
+
+      <:footer>Up/Down to navigate - Enter to select - Esc to close</:footer>
+    </.command>
+    """
   end
 
   defp slugify(title) do
