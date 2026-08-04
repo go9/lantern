@@ -59,6 +59,7 @@ defmodule LanternDemoWeb.DocsShell do
        {"tooltip", "Tooltip"},
        {"toast", "Toast"}
      ]},
+    {"Chat", [{"chat-kit", "Chat kit"}]},
     {"Charts",
      [
        {"area-chart", "Area chart"},

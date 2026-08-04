@@ -14,6 +14,7 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.AlertDialog
   alias LanternUI.Components.Autocomplete
   alias LanternUI.Components.Badge
+  alias LanternUI.Components.Avatar
   alias LanternUI.Components.Breadcrumb
   alias LanternUI.Components.Button
   alias LanternUI.Components.Calendar
@@ -28,6 +29,8 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Layout
   alias LanternUI.Components.Loading
   alias LanternUI.Components.Modal
+  alias LanternUI.Components.Message
+  alias LanternUI.Components.MessageScroller
   alias LanternUI.Components.Navlist
   alias LanternUI.Components.Pagination
   alias LanternUI.Components.Radio
@@ -179,6 +182,12 @@ defmodule LanternDemoWeb.ComponentsLive do
     "tooltip" => [{Tooltip, :tooltip}],
     "toast" => [{Toast, :toast_group}],
     "sheet" => [{Sheet, :sheet}],
+    "chat-kit" => [
+      {Avatar, :avatar},
+      {Message, :message},
+      {MessageScroller, :message_scroller},
+      {MessageScroller, :message_scroller_item}
+    ],
     "area-chart" => [{Charts, :area_chart}],
     "line-chart" => [{Charts, :line_chart}],
     "bar-chart" => [{Charts, :bar_chart}],
@@ -239,6 +248,83 @@ defmodule LanternDemoWeb.ComponentsLive do
     """
   }
 
+  @chat_demo_messages [
+    %{
+      id: "chat-1",
+      role: :assistant,
+      initials: "F",
+      header: "Assistant - 09:41",
+      body:
+        "Welcome. This transcript shows how a message row, avatar, metadata, and footer compose together.",
+      footer: "Ready",
+      align: "start",
+      tone: "surface"
+    },
+    %{
+      id: "chat-2",
+      role: :user,
+      initials: "AL",
+      header: "Alex - 09:42",
+      body: "Can you outline the three states this conversation can show?",
+      footer: "Seen",
+      align: "end",
+      tone: "primary"
+    },
+    %{
+      id: "chat-3",
+      role: :assistant,
+      initials: "LU",
+      header: "Assistant - 09:42",
+      body:
+        "The sample uses a current transcript, a busy streaming row, and a follow control for the latest item.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    },
+    %{
+      id: "chat-4",
+      role: :user,
+      initials: "AL",
+      header: "Alex - 09:43",
+      body: "What makes the longer response readable in a compact viewport?",
+      footer: "Seen",
+      align: "end",
+      tone: "primary"
+    },
+    %{
+      id: "chat-5",
+      role: :assistant,
+      initials: "F",
+      header: "Assistant - 09:43",
+      body:
+        "Readable chat content benefits from a deliberate measure and visible paragraph breaks.\n\nKeep supporting context in short paragraphs, use plain text when the component does not promise Markdown rendering, and let the surrounding message bubble provide the visual grouping.\n\nThe fixed-height viewport below is intentionally small enough to make the follow behavior observable while keeping each turn easy to scan.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    },
+    %{
+      id: "chat-6",
+      role: :user,
+      initials: "AL",
+      header: "Alex - 09:44",
+      body: "Add one more reply so I can see the latest item move into view.",
+      footer: "Seen",
+      align: "end",
+      tone: "primary"
+    },
+    %{
+      id: "chat-7",
+      role: :assistant,
+      initials: "LU",
+      header: "Assistant - 09:44",
+      body:
+        "The last item is marked as the scroll anchor. Use the controls above to append, hold, or reset this transcript.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    }
+  ]
+
   def mount(_params, _session, socket) do
     today = Date.utc_today()
 
@@ -287,7 +373,10 @@ defmodule LanternDemoWeb.ComponentsLive do
          %{label: "Q3", value: 55},
          %{label: "Q4", value: 47}
        ],
-       spark: [3, 5, 4, 8, 6, 9, 7, 11, 9, 12]
+       spark: [3, 5, 4, 8, 6, 9, 7, 11, 9, 12],
+       chat_demo_messages: @chat_demo_messages,
+       chat_demo_busy: false,
+       chat_demo_next_reply: 8
      )}
   end
 
@@ -343,6 +432,35 @@ defmodule LanternDemoWeb.ComponentsLive do
       |> LanternUI.close_dialog("alert-dialog-demo")
 
     {:noreply, socket}
+  end
+
+  def handle_event("chat_append_reply", _params, socket) do
+    next_reply = socket.assigns.chat_demo_next_reply
+
+    reply = %{
+      id: "chat-reply-#{next_reply}",
+      role: :assistant,
+      initials: "F",
+      header: "Assistant - now",
+      body: "Here is the stable appended reply. The new final item becomes the scroll anchor.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    }
+
+    {:noreply,
+     assign(socket,
+       chat_demo_messages: socket.assigns.chat_demo_messages ++ [reply],
+       chat_demo_next_reply: next_reply + 1
+     )}
+  end
+
+  def handle_event("chat_toggle_streaming", _params, socket) do
+    {:noreply, update(socket, :chat_demo_busy, &(!&1))}
+  end
+
+  def handle_event("chat_reset", _params, socket) do
+    {:noreply, assign(socket, chat_demo_messages: @chat_demo_messages, chat_demo_busy: false)}
   end
 
   def render(assigns) do
@@ -1524,6 +1642,84 @@ defmodule LanternDemoWeb.ComponentsLive do
         </.demo_section>
       </article>
 
+      <article :if={@current == "chat-kit"} class="docs-body">
+        <h1>Chat kit</h1>
+        <p>
+          A composed conversation demo using avatars, message rows, and an accessible
+          follow-aware message scroller. The controls make the scroll and busy states
+          visible without background work.
+        </p>
+        <.demo_section
+          title="Conversation"
+          description="A fixed-height transcript keeps MessageScroller as the inner scroll region; append, stream, and reset are ordinary LiveView events."
+          code={~S'''
+          <.message_scroller id="chat-kit-demo" label="Chat kit conversation" follow={true} busy={@chat_demo_busy}>
+            <.message_scroller_item
+              :for={{message, index} <- Enum.with_index(@chat_demo_messages)}
+              message_id={message.id}
+              scroll_anchor={index == length(@chat_demo_messages) - 1 and not @chat_demo_busy}
+            >
+              <.message align={message.align} tone={message.tone}>
+                <:avatar><.avatar initials={message.initials} /></:avatar>
+                <:header>{message.header}</:header>
+                {message.body}
+                <:footer>{message.footer}</:footer>
+              </.message>
+            </.message_scroller_item>
+            <.message_scroller_item :if={@chat_demo_busy} message_id="chat-streaming" scroll_anchor>
+              <.message align="start" tone="surface">
+                <:avatar><.avatar initials="LU" /></:avatar>
+                <:header>Assistant - now</:header>
+                Assistant is typing...
+              </.message>
+            </.message_scroller_item>
+          </.message_scroller>
+          '''}
+        >
+          <div class="docs-row docs-chat-controls">
+            <Button.button size="sm" phx-click="chat_append_reply">Append reply</Button.button>
+            <Button.button size="sm" variant="outline" phx-click="chat_toggle_streaming">
+              Toggle streaming
+            </Button.button>
+            <Button.button size="sm" variant="ghost" phx-click="chat_reset">Reset</Button.button>
+          </div>
+          <div class="docs-chat-frame">
+            <MessageScroller.message_scroller
+              id="chat-kit-demo"
+              label="Chat kit conversation"
+              follow={true}
+              busy={@chat_demo_busy}
+            >
+              <MessageScroller.message_scroller_item
+                :for={{message, index} <- Enum.with_index(@chat_demo_messages)}
+                id={message.id}
+                message_id={message.id}
+                scroll_anchor={index == length(@chat_demo_messages) - 1 and not @chat_demo_busy}
+              >
+                <Message.message align={message.align} tone={message.tone}>
+                  <:avatar><Avatar.avatar initials={message.initials} /></:avatar>
+                  <:header>{message.header}</:header>
+                  <p :for={paragraph <- String.split(message.body, "\n\n")}>{paragraph}</p>
+                  <:footer>{message.footer}</:footer>
+                </Message.message>
+              </MessageScroller.message_scroller_item>
+              <MessageScroller.message_scroller_item
+                :if={@chat_demo_busy}
+                id="chat-streaming"
+                message_id="chat-streaming"
+                scroll_anchor
+              >
+                <Message.message align="start" tone="surface">
+                  <:avatar><Avatar.avatar initials="LU" /></:avatar>
+                  <:header>Assistant - now</:header>
+                  <span class="docs-chat-typing">Assistant is typing...</span>
+                </Message.message>
+              </MessageScroller.message_scroller_item>
+            </MessageScroller.message_scroller>
+          </div>
+        </.demo_section>
+      </article>
+
       <article :if={@current == "area-chart"} class="docs-body">
         <h1>Area chart</h1>
         <p>
@@ -2615,6 +2811,13 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-section-title { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;
           margin: 0 0 0.25rem; color: var(--lantern-fg); }
         .docs-section-desc { font-size: 0.85rem; color: var(--lantern-fg-muted); margin: 0 0 0.9rem; }
+        .docs-chat-controls { margin-bottom: .75rem; }
+        .docs-chat-frame { height: 30rem; min-height: 0; }
+        .docs-chat-frame .lui-message-scroller { height: 100%; }
+        .docs-chat-frame .lui-message-scroller-content { padding: 1rem; }
+        .docs-chat-frame .lui-message p { margin: 0 0 .65rem; }
+        .docs-chat-frame .lui-message p:last-child { margin-bottom: 0; }
+        .docs-chat-typing { color: var(--lantern-fg-muted); font-style: italic; }
 
         /* Framed example: one card, Preview/Code tabs, code hidden by default. */
         .docs-example { border: 1px solid var(--lantern-border);

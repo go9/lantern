@@ -37,7 +37,8 @@ defmodule LanternDemo.MixProject do
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
       {:bandit, "~> 1.7"},
-      {:req, "~> 0.5"}
+      {:req, "~> 0.5"},
+      {:lazy_html, ">= 0.1.0", only: :test}
     ]
   end
 
