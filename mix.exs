@@ -33,7 +33,10 @@ defmodule Lantern.MixProject do
     [
       {:phoenix_live_view, "~> 1.1"},
       {:livecode, github: "go9/livecode"},
-      {:lantern_ui, github: "go9/lantern-ui"},
+      {:lantern_ui,
+       github: "go9/lantern-ui",
+       ref: "0ad0627054ee6765c81eceace58ad316959565bb",
+       override: true},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},
       # Heroicons SVG source (build-only, uncompiled). icon/1 reads the outline
