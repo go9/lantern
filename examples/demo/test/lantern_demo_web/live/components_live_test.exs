@@ -2,6 +2,7 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
   use ExUnit.Case, async: true
 
   import Phoenix.ConnTest
+  import Phoenix.LiveViewTest
 
   @endpoint LanternDemoWeb.Endpoint
 
@@ -12,7 +13,33 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
     {"alert-dialog",
      ["<h1>Alert dialog</h1>", ~s(id="alert-dialog-demo"), ~s(role="alertdialog")]},
     {"skeleton", ["<h1>Skeleton</h1>", ~s(aria-label="Loading profile"), "lui-skeleton"]},
-    {"stat", ["<h1>Stat cards</h1>", "lui-stat-grid", "pending-warehouse-confirmation-2026-07"]}
+    {"stat", ["<h1>Stat cards</h1>", "lui-stat-grid", "pending-warehouse-confirmation-2026-07"]},
+    {"command",
+     [
+       "<h1>Command palette</h1>",
+       ~s(id="cmd-demo"),
+       ~s(phx-hook="LanternCommand"),
+       ~s(data-on-search="command_search"),
+       ~s(data-value="goto-theming")
+     ]},
+    {"chat-kit",
+     [
+       "<h1>Chat kit</h1>",
+       ~s(id="chat-kit-demo"),
+       ~s(phx-hook="LanternMessageScroller"),
+       ~s(role="region"),
+       ~s(aria-label="Chat kit conversation"),
+       ~s(role="log"),
+       ~s(data-align="start"),
+       ~s(data-align="end"),
+       ~s(data-tone="surface"),
+       ~s(data-tone="primary"),
+       ~s(data-part="avatar"),
+       "AL",
+       "Append reply",
+       "Toggle streaming",
+       "Reset"
+     ]}
   ]
 
   test "new component pages render permanent examples and shared appearance controls" do
@@ -35,6 +62,76 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
     assert html =~ ~s(href="/components/alert-dialog")
     assert html =~ ~s(href="/components/skeleton")
     assert html =~ ~s(href="/components/stat")
+    assert html =~ ~s(href="/components/command")
+    assert html =~ ~s(href="/components/chat-kit")
+  end
+
+  test "chat kit controls change the transcript and busy state" do
+    {:ok, view, html} = live(build_conn(), "/components/chat-kit")
+
+    assert html =~ ~s(aria-busy="false")
+    assert anchor_count(html) == 1
+    assert html =~ ~s(data-message-id="chat-7")
+
+    html = view |> element(~s(button[phx-click="chat_append_reply"])) |> render_click()
+    assert html =~ ~s(data-message-id="chat-reply-8")
+    assert anchor_count(html) == 1
+
+    html = view |> element(~s(button[phx-click="chat_toggle_streaming"])) |> render_click()
+    assert html =~ ~s(aria-busy="true")
+    assert html =~ ~s(id="chat-streaming")
+    assert html =~ "Assistant is typing..."
+    assert query_nodes(html, ~s([data-message-id="chat-reply-8"][data-scroll-anchor])) == []
+    assert anchor_count(html) == 1
+
+    html = view |> element(~s(button[phx-click="chat_toggle_streaming"])) |> render_click()
+    assert html =~ ~s(aria-busy="false")
+    assert query_nodes(html, ~s([data-message-id="chat-reply-8"][data-scroll-anchor])) != []
+    assert anchor_count(html) == 1
+
+    html = view |> element(~s(button[phx-click="chat_reset"])) |> render_click()
+    refute html =~ ~s(data-message-id="chat-reply-8")
+    assert query_nodes(html, ~s([data-message-id="chat-7"][data-scroll-anchor])) != []
+    assert html =~ ~s(aria-busy="false")
+    assert anchor_count(html) == 1
+
+    html = view |> element(~s(button[phx-click="chat_append_reply"])) |> render_click()
+    assert html =~ ~s(data-message-id="chat-reply-9")
+    refute html =~ ~s(data-message-id="chat-reply-8")
+    assert anchor_count(html) == 1
+  end
+
+  # The palette filters nothing itself, so these handlers ARE the search.
+  test "command palette search filters and groups the demo command list" do
+    {:ok, socket} = mount_components()
+
+    assert Enum.map(socket.assigns.command_groups, &elem(&1, 0)) ==
+             ["Navigate", "Actions", "Danger zone"]
+
+    {:noreply, navigate} =
+      LanternDemoWeb.ComponentsLive.handle_event("command_search", %{"query" => "go to"}, socket)
+
+    assert [{"Navigate", items}] = navigate.assigns.command_groups
+    assert Enum.map(items, & &1.value) == ["goto-buttons", "goto-data-table", "goto-theming"]
+    assert navigate.assigns.command_query == "go to"
+
+    {:noreply, empty} =
+      LanternDemoWeb.ComponentsLive.handle_event("command_search", %{"query" => "zzz"}, socket)
+
+    assert empty.assigns.command_groups == []
+  end
+
+  test "command palette selection is reported back with its label" do
+    {:ok, socket} = mount_components()
+
+    {:noreply, chosen} =
+      LanternDemoWeb.ComponentsLive.handle_event(
+        "command_select",
+        %{"value" => "new-ticket"},
+        socket
+      )
+
+    assert chosen.assigns.command_selection == {"new-ticket", "Open a new ticket"}
   end
 
   test "server-backed autocomplete filters and groups fixed catalog data" do
@@ -99,5 +196,13 @@ defmodule LanternDemoWeb.ComponentsLiveTest do
       %{},
       %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}}}
     )
+  end
+
+  defp anchor_count(html) do
+    query_nodes(html, "[data-scroll-anchor]") |> length()
+  end
+
+  defp query_nodes(html, selector) do
+    html |> LazyHTML.from_document() |> LazyHTML.query(selector) |> LazyHTML.to_tree()
   end
 end

@@ -45,6 +45,7 @@ defmodule LanternDemoWeb.DocsShell do
        {"alert-dialog", "Alert dialog"},
        {"sheet", "Sheet"},
        {"dropdown", "Dropdown menu"},
+       {"command", "Command palette"},
        {"breadcrumb", "Breadcrumb"},
        {"empty-state", "Empty state"},
        {"timeline", "Timeline"},
@@ -58,6 +59,7 @@ defmodule LanternDemoWeb.DocsShell do
        {"tooltip", "Tooltip"},
        {"toast", "Toast"}
      ]},
+    {"Chat", [{"chat-kit", "Chat kit"}]},
     {"Charts",
      [
        {"area-chart", "Area chart"},

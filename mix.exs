@@ -35,7 +35,7 @@ defmodule Lantern.MixProject do
       {:livecode, github: "go9/livecode"},
       {:lantern_ui,
        github: "go9/lantern-ui",
-       ref: "f4e46ffebcb3e219514cb0bd01eb97487cb17d65",
+       ref: "0ad0627054ee6765c81eceace58ad316959565bb",
        override: true},
       {:postgrex, "~> 0.17"},
       {:jason, "~> 1.0"},

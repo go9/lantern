@@ -14,10 +14,12 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.AlertDialog
   alias LanternUI.Components.Autocomplete
   alias LanternUI.Components.Badge
+  alias LanternUI.Components.Avatar
   alias LanternUI.Components.Breadcrumb
   alias LanternUI.Components.Button
   alias LanternUI.Components.Calendar
   alias LanternUI.Components.Checkbox
+  alias LanternUI.Components.Command
   alias LanternUI.Components.DatePicker
   alias LanternUI.Components.DatetimeField
   alias LanternUI.Components.Dropdown
@@ -27,6 +29,8 @@ defmodule LanternDemoWeb.ComponentsLive do
   alias LanternUI.Components.Layout
   alias LanternUI.Components.Loading
   alias LanternUI.Components.Modal
+  alias LanternUI.Components.Message
+  alias LanternUI.Components.MessageScroller
   alias LanternUI.Components.Navlist
   alias LanternUI.Components.Pagination
   alias LanternUI.Components.Radio
@@ -65,6 +69,69 @@ defmodule LanternDemoWeb.ComponentsLive do
     %{group: "Nintendo Switch", label: "Animal Crossing: New Horizons", value: "animal-crossing"}
   ]
 
+  # Command palette source data. The component deliberately filters nothing —
+  # it renders exactly the items it is handed — so this list stays here and the
+  # LiveView answers `command_search` itself.
+  @commands [
+    %{
+      group: "Navigate",
+      value: "goto-buttons",
+      label: "Go to Button",
+      icon: "cursor-arrow-rays",
+      description: "Components → Button",
+      shortcut: "G B"
+    },
+    %{
+      group: "Navigate",
+      value: "goto-data-table",
+      label: "Go to Data table",
+      icon: "view-columns",
+      description: "Components → Data table",
+      shortcut: "G T"
+    },
+    %{
+      group: "Navigate",
+      value: "goto-theming",
+      label: "Go to Theming",
+      icon: "sparkles",
+      description: "Tokens, density, and dark mode",
+      shortcut: "G H"
+    },
+    %{
+      group: "Actions",
+      value: "toggle-theme",
+      label: "Toggle dark mode",
+      icon: "adjustments-horizontal",
+      description: "Flip the demo between light and dark",
+      shortcut: "⌘ D"
+    },
+    %{
+      group: "Actions",
+      value: "copy-install",
+      label: "Copy install snippet",
+      icon: "document",
+      description: ~s({:lantern_ui, "~> 0.3"}),
+      shortcut: "⌘ C"
+    },
+    %{
+      group: "Actions",
+      value: "new-ticket",
+      label: "Open a new ticket",
+      icon: "inbox",
+      description: "File an issue against lantern-ui",
+      shortcut: "⌘ N"
+    },
+    %{
+      group: "Danger zone",
+      value: "reset-sandbox",
+      label: "Reset the sandbox database",
+      icon: "trash",
+      description: "Disabled in this demo",
+      shortcut: nil,
+      disabled: true
+    }
+  ]
+
   # slug -> the component functions whose props/slots to document (introspected)
   @api_map %{
     "app-shell" => [
@@ -95,6 +162,12 @@ defmodule LanternDemoWeb.ComponentsLive do
       {Dropdown, :dropdown_button},
       {Dropdown, :dropdown_link}
     ],
+    "command" => [
+      {Command, :command},
+      {Command, :command_group},
+      {Command, :command_item},
+      {Command, :command_empty}
+    ],
     "breadcrumb" => [{Breadcrumb, :breadcrumb}],
     "empty-state" => [{EmptyState, :empty_state}],
     "timeline" => [{Timeline, :timeline}, {Timeline, :timeline_item}],
@@ -109,6 +182,12 @@ defmodule LanternDemoWeb.ComponentsLive do
     "tooltip" => [{Tooltip, :tooltip}],
     "toast" => [{Toast, :toast_group}],
     "sheet" => [{Sheet, :sheet}],
+    "chat-kit" => [
+      {Avatar, :avatar},
+      {Message, :message},
+      {MessageScroller, :message_scroller},
+      {MessageScroller, :message_scroller_item}
+    ],
     "area-chart" => [{Charts, :area_chart}],
     "line-chart" => [{Charts, :line_chart}],
     "bar-chart" => [{Charts, :bar_chart}],
@@ -169,6 +248,83 @@ defmodule LanternDemoWeb.ComponentsLive do
     """
   }
 
+  @chat_demo_messages [
+    %{
+      id: "chat-1",
+      role: :assistant,
+      initials: "F",
+      header: "Assistant - 09:41",
+      body:
+        "Welcome. This transcript shows how a message row, avatar, metadata, and footer compose together.",
+      footer: "Ready",
+      align: "start",
+      tone: "surface"
+    },
+    %{
+      id: "chat-2",
+      role: :user,
+      initials: "AL",
+      header: "Alex - 09:42",
+      body: "Can you outline the three states this conversation can show?",
+      footer: "Seen",
+      align: "end",
+      tone: "primary"
+    },
+    %{
+      id: "chat-3",
+      role: :assistant,
+      initials: "LU",
+      header: "Assistant - 09:42",
+      body:
+        "The sample uses a current transcript, a busy streaming row, and a follow control for the latest item.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    },
+    %{
+      id: "chat-4",
+      role: :user,
+      initials: "AL",
+      header: "Alex - 09:43",
+      body: "What makes the longer response readable in a compact viewport?",
+      footer: "Seen",
+      align: "end",
+      tone: "primary"
+    },
+    %{
+      id: "chat-5",
+      role: :assistant,
+      initials: "F",
+      header: "Assistant - 09:43",
+      body:
+        "Readable chat content benefits from a deliberate measure and visible paragraph breaks.\n\nKeep supporting context in short paragraphs, use plain text when the component does not promise Markdown rendering, and let the surrounding message bubble provide the visual grouping.\n\nThe fixed-height viewport below is intentionally small enough to make the follow behavior observable while keeping each turn easy to scan.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    },
+    %{
+      id: "chat-6",
+      role: :user,
+      initials: "AL",
+      header: "Alex - 09:44",
+      body: "Add one more reply so I can see the latest item move into view.",
+      footer: "Seen",
+      align: "end",
+      tone: "primary"
+    },
+    %{
+      id: "chat-7",
+      role: :assistant,
+      initials: "LU",
+      header: "Assistant - 09:44",
+      body:
+        "The last item is marked as the scroll anchor. Use the controls above to append, hold, or reset this transcript.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    }
+  ]
+
   def mount(_params, _session, socket) do
     today = Date.utc_today()
 
@@ -205,6 +361,9 @@ defmodule LanternDemoWeb.ComponentsLive do
        demo_tab: "one",
        toast_placement: "top-right",
        catalog_options: [],
+       command_query: "",
+       command_groups: command_matches(""),
+       command_selection: nil,
        alert_dialog_status: nil,
        area: area,
        line: line,
@@ -214,7 +373,10 @@ defmodule LanternDemoWeb.ComponentsLive do
          %{label: "Q3", value: 55},
          %{label: "Q4", value: 47}
        ],
-       spark: [3, 5, 4, 8, 6, 9, 7, 11, 9, 12]
+       spark: [3, 5, 4, 8, 6, 9, 7, 11, 9, 12],
+       chat_demo_messages: @chat_demo_messages,
+       chat_demo_busy: false,
+       chat_demo_next_reply: 8
      )}
   end
 
@@ -250,6 +412,19 @@ defmodule LanternDemoWeb.ComponentsLive do
     {:noreply, assign(socket, :catalog_options, catalog_options(query))}
   end
 
+  # The palette does no filtering of its own — it renders what it is handed and
+  # reports the query upward. Answering this event is what makes typing filter.
+  def handle_event("command_search", %{"query" => query}, socket) do
+    {:noreply, assign(socket, command_query: query, command_groups: command_matches(query))}
+  end
+
+  def handle_event("command_select", %{"value" => value}, socket) do
+    label =
+      Enum.find_value(@commands, value, fn cmd -> cmd.value == value && cmd.label end)
+
+    {:noreply, assign(socket, :command_selection, {value, label})}
+  end
+
   def handle_event("confirm_demo_revoke", _params, socket) do
     socket =
       socket
@@ -257,6 +432,35 @@ defmodule LanternDemoWeb.ComponentsLive do
       |> LanternUI.close_dialog("alert-dialog-demo")
 
     {:noreply, socket}
+  end
+
+  def handle_event("chat_append_reply", _params, socket) do
+    next_reply = socket.assigns.chat_demo_next_reply
+
+    reply = %{
+      id: "chat-reply-#{next_reply}",
+      role: :assistant,
+      initials: "F",
+      header: "Assistant - now",
+      body: "Here is the stable appended reply. The new final item becomes the scroll anchor.",
+      footer: "Delivered",
+      align: "start",
+      tone: "surface"
+    }
+
+    {:noreply,
+     assign(socket,
+       chat_demo_messages: socket.assigns.chat_demo_messages ++ [reply],
+       chat_demo_next_reply: next_reply + 1
+     )}
+  end
+
+  def handle_event("chat_toggle_streaming", _params, socket) do
+    {:noreply, update(socket, :chat_demo_busy, &(!&1))}
+  end
+
+  def handle_event("chat_reset", _params, socket) do
+    {:noreply, assign(socket, chat_demo_messages: @chat_demo_messages, chat_demo_busy: false)}
   end
 
   def render(assigns) do
@@ -1162,6 +1366,95 @@ defmodule LanternDemoWeb.ComponentsLive do
         </.demo_section>
       </article>
 
+      <article :if={@current == "command"} class="docs-body">
+        <h1>Command palette</h1>
+        <p>
+          A ⌘K dialog: a modal combobox over a listbox of actions, on the shared overlay
+          runtime. The component owns opening, the focus trap, keyboard traversal, and
+          <code>aria-activedescendant</code>; <strong>it never filters its own children</strong>
+          — it renders exactly the items you hand it and reports the query upward, so search
+          can come from a database, an index, or memory.
+        </p>
+        <.demo_section
+          title="Searchable actions"
+          description="Press ⌘K (Ctrl+K on Windows/Linux) or use the button. Type to filter, ↑/↓ to move, Enter to choose, Esc to close. Filtering happens in the LiveView — the palette itself renders whatever it is given."
+          code={~S'''
+          # LiveView — the palette does no filtering, so you do
+          def handle_event("command_search", %{"query" => query}, socket) do
+            {:noreply, assign(socket, query: query, groups: command_matches(query))}
+          end
+
+          def handle_event("command_select", %{"value" => value}, socket) do
+            {:noreply, assign(socket, :selection, value)}
+          end
+
+          <.button phx-click={LanternUI.open_dialog("cmd-demo")}>
+            Search… <.command_shortcut>⌘K</.command_shortcut>
+          </.button>
+
+          <.command id="cmd-demo" on_search="command_search" on_select="command_select">
+            <.command_group :for={{group, items} <- @groups} label={group}>
+              <.command_item :for={cmd <- items} value={cmd.value} disabled={cmd.disabled}>
+                <:icon><.icon name={cmd.icon} /></:icon>
+                {cmd.label}
+                <:description>{cmd.description}</:description>
+                <:shortcut>{cmd.shortcut}</:shortcut>
+              </.command_item>
+            </.command_group>
+
+            <.command_empty :if={@groups == []}>No commands match “{@query}”.</.command_empty>
+
+            <:footer>↑↓ to navigate · ↵ to select · esc to close</:footer>
+          </.command>
+          '''}
+        >
+          <div class="docs-row">
+            <Button.button phx-click={LanternUI.open_dialog("cmd-demo")}>
+              Search commands…
+              <Command.command_shortcut>⌘K</Command.command_shortcut>
+            </Button.button>
+            <p id="command-selection" class="docs-confirm-status" role="status">
+              <%= case @command_selection do %>
+                <% nil -> %>
+                  Nothing chosen yet — open the palette and press Enter on a row.
+                <% {value, label} -> %>
+                  Selected <strong>{label}</strong> (<code>{value}</code>)
+              <% end %>
+            </p>
+          </div>
+
+          <Command.command
+            id="cmd-demo"
+            label="Demo command palette"
+            placeholder="Type a command or search…"
+            on_search="command_search"
+            on_select="command_select"
+            debounce={120}
+          >
+            <Command.command_group :for={{group, items} <- @command_groups} label={group}>
+              <Command.command_item
+                :for={cmd <- items}
+                value={cmd.value}
+                disabled={Map.get(cmd, :disabled, false)}
+              >
+                <:icon><Icon.icon name={cmd.icon} /></:icon>
+                {cmd.label}
+                <:description>{cmd.description}</:description>
+                <:shortcut :if={cmd.shortcut}>{cmd.shortcut}</:shortcut>
+              </Command.command_item>
+            </Command.command_group>
+
+            <Command.command_empty :if={@command_groups == []}>
+              No commands match “{@command_query}”.
+            </Command.command_empty>
+
+            <:footer>
+              <span>↑↓ to navigate · ↵ to select · esc to close</span>
+            </:footer>
+          </Command.command>
+        </.demo_section>
+      </article>
+
       <article :if={@current == "breadcrumb"} class="docs-body">
         <h1>Breadcrumb</h1>
         <p>
@@ -1346,6 +1639,84 @@ defmodule LanternDemoWeb.ComponentsLive do
             </Timeline.timeline_item>
             <Timeline.timeline_item status={:pending} label="Queued" at="just now" title="PR #421" />
           </Timeline.timeline>
+        </.demo_section>
+      </article>
+
+      <article :if={@current == "chat-kit"} class="docs-body">
+        <h1>Chat kit</h1>
+        <p>
+          A composed conversation demo using avatars, message rows, and an accessible
+          follow-aware message scroller. The controls make the scroll and busy states
+          visible without background work.
+        </p>
+        <.demo_section
+          title="Conversation"
+          description="A fixed-height transcript keeps MessageScroller as the inner scroll region; append, stream, and reset are ordinary LiveView events."
+          code={~S'''
+          <.message_scroller id="chat-kit-demo" label="Chat kit conversation" follow={true} busy={@chat_demo_busy}>
+            <.message_scroller_item
+              :for={{message, index} <- Enum.with_index(@chat_demo_messages)}
+              message_id={message.id}
+              scroll_anchor={index == length(@chat_demo_messages) - 1 and not @chat_demo_busy}
+            >
+              <.message align={message.align} tone={message.tone}>
+                <:avatar><.avatar initials={message.initials} /></:avatar>
+                <:header>{message.header}</:header>
+                {message.body}
+                <:footer>{message.footer}</:footer>
+              </.message>
+            </.message_scroller_item>
+            <.message_scroller_item :if={@chat_demo_busy} message_id="chat-streaming" scroll_anchor>
+              <.message align="start" tone="surface">
+                <:avatar><.avatar initials="LU" /></:avatar>
+                <:header>Assistant - now</:header>
+                Assistant is typing...
+              </.message>
+            </.message_scroller_item>
+          </.message_scroller>
+          '''}
+        >
+          <div class="docs-row docs-chat-controls">
+            <Button.button size="sm" phx-click="chat_append_reply">Append reply</Button.button>
+            <Button.button size="sm" variant="outline" phx-click="chat_toggle_streaming">
+              Toggle streaming
+            </Button.button>
+            <Button.button size="sm" variant="ghost" phx-click="chat_reset">Reset</Button.button>
+          </div>
+          <div class="docs-chat-frame">
+            <MessageScroller.message_scroller
+              id="chat-kit-demo"
+              label="Chat kit conversation"
+              follow={true}
+              busy={@chat_demo_busy}
+            >
+              <MessageScroller.message_scroller_item
+                :for={{message, index} <- Enum.with_index(@chat_demo_messages)}
+                id={message.id}
+                message_id={message.id}
+                scroll_anchor={index == length(@chat_demo_messages) - 1 and not @chat_demo_busy}
+              >
+                <Message.message align={message.align} tone={message.tone}>
+                  <:avatar><Avatar.avatar initials={message.initials} /></:avatar>
+                  <:header>{message.header}</:header>
+                  <p :for={paragraph <- String.split(message.body, "\n\n")}>{paragraph}</p>
+                  <:footer>{message.footer}</:footer>
+                </Message.message>
+              </MessageScroller.message_scroller_item>
+              <MessageScroller.message_scroller_item
+                :if={@chat_demo_busy}
+                id="chat-streaming"
+                message_id="chat-streaming"
+                scroll_anchor
+              >
+                <Message.message align="start" tone="surface">
+                  <:avatar><Avatar.avatar initials="LU" /></:avatar>
+                  <:header>Assistant - now</:header>
+                  <span class="docs-chat-typing">Assistant is typing...</span>
+                </Message.message>
+              </MessageScroller.message_scroller_item>
+            </MessageScroller.message_scroller>
+          </div>
         </.demo_section>
       </article>
 
@@ -2440,6 +2811,13 @@ defmodule LanternDemoWeb.ComponentsLive do
         .docs-section-title { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em;
           margin: 0 0 0.25rem; color: var(--lantern-fg); }
         .docs-section-desc { font-size: 0.85rem; color: var(--lantern-fg-muted); margin: 0 0 0.9rem; }
+        .docs-chat-controls { margin-bottom: .75rem; }
+        .docs-chat-frame { height: 30rem; min-height: 0; }
+        .docs-chat-frame .lui-message-scroller { height: 100%; }
+        .docs-chat-frame .lui-message-scroller-content { padding: 1rem; }
+        .docs-chat-frame .lui-message p { margin: 0 0 .65rem; }
+        .docs-chat-frame .lui-message p:last-child { margin-bottom: 0; }
+        .docs-chat-typing { color: var(--lantern-fg-muted); font-style: italic; }
 
         /* Framed example: one card, Preview/Code tabs, code hidden by default. */
         .docs-example { border: 1px solid var(--lantern-border);
@@ -2609,6 +2987,20 @@ defmodule LanternDemoWeb.ComponentsLive do
         {group, Enum.map(items, &{&1.label, &1.value})}
       end)
     end
+  end
+
+  defp command_matches(query) do
+    normalized = query |> String.trim() |> String.downcase()
+
+    @commands
+    |> Enum.filter(fn cmd ->
+      normalized == "" or
+        String.contains?(String.downcase(cmd.label), normalized) or
+        String.contains?(String.downcase(cmd.description || ""), normalized) or
+        String.contains?(String.downcase(cmd.group), normalized)
+    end)
+    |> Enum.chunk_by(& &1.group)
+    |> Enum.map(fn [%{group: group} | _] = items -> {group, items} end)
   end
 
   defp slugify(title) do
