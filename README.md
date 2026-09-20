@@ -265,16 +265,7 @@ navigation, charts, and exports stay available.
 
 A live demo is running at **[lantern-demo.flickercloud.com](https://lantern-demo.flickercloud.com)** — the shared database is read-only; request a sandbox to get a full read/write Postgres branch of your own.
 
-To run the demo locally:
-
-```bash
-cd examples/demo
-docker compose up -d
-mix setup
-mix phx.server
-```
-
-Open <http://localhost:4001>. See `examples/demo/README.md` for details.
+To run the demo locally, see **[go9/lantern-demo](https://github.com/go9/lantern-demo)**.
 
 ## Development
 
